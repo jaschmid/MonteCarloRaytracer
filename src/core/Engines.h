@@ -1,6 +1,6 @@
 /********************************************************/
-// FILE: RaytraceScene.h
-// DESCRIPTION: Raytracer exported Scene interface
+// FILE: EngineBase.h
+// DESCRIPTION: Raytracer Engine
 // AUTHOR: Jan Schmid (jaschmid@eml.cc)    
 /********************************************************/
 // This work is licensed under the Creative Commons 
@@ -11,33 +11,33 @@
 // Suite 900, Mountain View, California, 94041, USA.
 /********************************************************/
 
+
 #if defined(_MSC_VER) && (_MSC_VER >= 1020)
 #pragma once
 #endif
 
-#ifndef RAYTRACE_SCENE_GUARD
-#define RAYTRACE_SCENE_GUARD
+#ifndef RAYTRACE_ENGINES_GUARD
+#define RAYTRACE_ENGINES_GUARD
 
+#include <boost/shared_ptr.hpp>
 #include <RaytraceCommon.h>
-#include <RaytracePropertySet.h>
-#include <RaytraceObject.h>
+#include "EngineBase.h"
+#include "ImageWriter.h"
+
 
 namespace Raytrace {
 
-/******************************************/
-// Raytracer Scene Interface
-/******************************************/
-//
-/******************************************/
-	
-	extern Scene CreateScene(const String& name = String());
+struct GenericEngineSettings
+{
+	void*	_pDataOut;
+	int		_nDataSize;
+	int		_iXResolution;
+	int		_iYResolution;
+	::Math::IMAGE_FORMAT	_format;
+	Scene	_scene;
+};
 
-	class IScene : public virtual IPropertySet, public virtual IObjectContainer
-	{
-	public:
-
-		virtual const String& GetName() const = 0;
-	};
+boost::shared_ptr<RaytraceEngineBase>	CreateDummyEngine(const GenericEngineSettings& settings);
 
 }
 

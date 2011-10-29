@@ -63,7 +63,7 @@
       <OutputFile>$(OutDir)\$(ProjectName).exe</OutputFile>
       <AdditionalLibraryDirectories>$(QTDIR)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>qtmaind.lib;QtCored4.lib;QtGuid4.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(SolutionDir)..\..\out\RaytraceCore\$(Platform)\$(Configuration)\RaytraceCore.lib;qtmaind.lib;QtCored4.lib;QtGuid4.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -83,7 +83,7 @@
       <OutputFile>$(OutDir)\$(ProjectName).exe</OutputFile>
       <AdditionalLibraryDirectories>$(QTDIR)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>false</GenerateDebugInformation>
-      <AdditionalDependencies>qtmain.lib;QtCore4.lib;QtGui4.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(SolutionDir)..\..\out\RaytraceCore\$(Platform)\$(Configuration)\RaytraceCore.lib;qtmain.lib;QtCore4.lib;QtGui4.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -159,7 +159,7 @@
   </ImportGroup>
   <ProjectExtensions>
     <VisualStudio>
-      <UserProperties UicDir=".\..\..\temp\RaytraceGUI\$(PlatformName)\$(ConfigurationName)\Uic" MocDir=".\..\..\temp\RaytraceGUI\$(PlatformName)\$(ConfigurationName)\Moc" MocOptions="" RccDir=".\..\..\temp\RaytraceGUI\$(PlatformName)\$(ConfigurationName)\Rcc" lupdateOnBuild="0" lupdateOptions="" lreleaseOptions="" QtVersion_x0020_Win32="qt-4.7.4" />
+      <UserProperties UicDir=".\..\..\temp\RaytraceGUI\$(PlatformName)\$(ConfigurationName)\Uic" MocDir=".\..\..\temp\RaytraceGUI\$(PlatformName)\$(ConfigurationName)\Moc" MocOptions="" RccDir=".\..\..\temp\RaytraceGUI\$(PlatformName)\$(ConfigurationName)\Rcc" lupdateOnBuild="1" lupdateOptions="" lreleaseOptions="" QtVersion_x0020_Win32="qt-4.7.4" />
     </VisualStudio>
   </ProjectExtensions>
 </Project>

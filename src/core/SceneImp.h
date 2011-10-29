@@ -1,6 +1,6 @@
 /********************************************************/
-// FILE: RaytraceScene.h
-// DESCRIPTION: Raytracer exported Scene interface
+// FILE: SceneImp.h
+// DESCRIPTION: Raytracer Scene Implementation
 // AUTHOR: Jan Schmid (jaschmid@eml.cc)    
 /********************************************************/
 // This work is licensed under the Creative Commons 
@@ -15,30 +15,38 @@
 #pragma once
 #endif
 
-#ifndef RAYTRACE_SCENE_GUARD
-#define RAYTRACE_SCENE_GUARD
+#ifndef RAYTRACE_SCENE_IMP_GUARD
+#define RAYTRACE_SCENE_IMP_GUARD
 
-#include <RaytraceCommon.h>
-#include <RaytracePropertySet.h>
-#include <RaytraceObject.h>
+#include <RaytraceScene.h>
+#include <map>
+#include "PropertySetImp.h"
+#include "ObjectContainerImp.h"
 
 namespace Raytrace {
 
-/******************************************/
-// Raytracer Scene Interface
-/******************************************/
-//
-/******************************************/
-	
-	extern Scene CreateScene(const String& name = String());
+	class CameraImp;
+	class TrimeshImp;
 
-	class IScene : public virtual IPropertySet, public virtual IObjectContainer
+	class SceneImp : public ObjectContainer<PropertySetImp<SceneImp,IScene>>
 	{
 	public:
 
-		virtual const String& GetName() const = 0;
+		~SceneImp();
+		const String& GetName() const;
+
+		Result InsertObject(const Object& object);
+
+	private:
+
+		typedef ObjectContainer<PropertySetImp<SceneImp,IScene>> Base;
+
+		SceneImp(const String& name);
+		friend Scene CreateScene(const String& name);
+
+		String						_name;
 	};
 
-}
+};
 
 #endif

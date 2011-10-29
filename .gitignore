@@ -2,3 +2,5 @@
 out/
 temp/
 projects/vs2010/Raytracer.suo
+projects/vs2010/ipch/
+projects/vs2010/Raytracer.sdf

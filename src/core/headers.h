@@ -21,8 +21,11 @@
 
 #include <RaytraceScene.h>
 #include <RaytraceCamera.h>
-#include <RaytraceLight.h>
+#include <RaytraceMaterial.h>
+#include <RaytraceTriMesh.h>
 #include <RaytraceObject.h>
 #include <RaytraceXmlParser.h>
+
+#include <../TinyXml/tinyxml.h>
 
 #endif

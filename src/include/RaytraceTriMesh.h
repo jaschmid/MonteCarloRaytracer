@@ -1,6 +1,6 @@
 /********************************************************/
-// FILE: RaytraceScene.h
-// DESCRIPTION: Raytracer exported Scene interface
+// FILE: RaytraceTriMesh.h
+// DESCRIPTION: Raytracer exported Material interface
 // AUTHOR: Jan Schmid (jaschmid@eml.cc)    
 /********************************************************/
 // This work is licensed under the Creative Commons 
@@ -15,28 +15,32 @@
 #pragma once
 #endif
 
-#ifndef RAYTRACE_SCENE_GUARD
-#define RAYTRACE_SCENE_GUARD
+#ifndef RAYTRACE_TRIMESH_GUARD
+#define RAYTRACE_TRIMESH_GUARD
 
 #include <RaytraceCommon.h>
-#include <RaytracePropertySet.h>
 #include <RaytraceObject.h>
 
 namespace Raytrace {
 
 /******************************************/
-// Raytracer Scene Interface
+// Raytracer TriMesh Interface
 /******************************************/
-//
+// 
 /******************************************/
 	
-	extern Scene CreateScene(const String& name = String());
+	extern TriMesh CreateTriMesh(const String& name = String());
 
-	class IScene : public virtual IPropertySet, public virtual IObjectContainer
+	class ITriMesh : public virtual IObject
 	{
 	public:
 
-		virtual const String& GetName() const = 0;
+		//very primitive right now but sufficient for our purposes
+
+		virtual int PushVertex(const Vector3& location) = 0;
+		virtual int PushTriangle(int vertex1,int vertex2,int vertex3,Material material) = 0;
+
+		static RObjectType ObjectType;
 	};
 
 }

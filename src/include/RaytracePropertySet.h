@@ -1,6 +1,6 @@
 /********************************************************/
-// FILE: RaytraceScene.h
-// DESCRIPTION: Raytracer exported Scene interface
+// FILE: RaytraceOutput.h
+// DESCRIPTION: Raytracer exported Output interface
 // AUTHOR: Jan Schmid (jaschmid@eml.cc)    
 /********************************************************/
 // This work is licensed under the Creative Commons 
@@ -15,28 +15,24 @@
 #pragma once
 #endif
 
-#ifndef RAYTRACE_SCENE_GUARD
-#define RAYTRACE_SCENE_GUARD
+#ifndef RAYTRACE_PROPERTY_SET_GUARD
+#define RAYTRACE_PROPERTY_SET_GUARD
 
 #include <RaytraceCommon.h>
-#include <RaytracePropertySet.h>
-#include <RaytraceObject.h>
 
 namespace Raytrace {
 
 /******************************************/
-// Raytracer Scene Interface
+// Raytracer Property Set Interface
 /******************************************/
-//
+// 
 /******************************************/
-	
-	extern Scene CreateScene(const String& name = String());
 
-	class IScene : public virtual IPropertySet, public virtual IObjectContainer
+	class IPropertySet : public virtual IBase
 	{
 	public:
-
-		virtual const String& GetName() const = 0;
+		virtual Result SetPropertyValue(const String& prop,const String& value) = 0;
+		virtual Result GetPropertyValue(const String& prop,String& value) const = 0;
 	};
 
 }

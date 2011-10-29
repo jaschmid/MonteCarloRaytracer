@@ -1,29 +1,274 @@
-<UI version="4.0" >
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
  <class>RaytraceGUIClass</class>
- <widget class="QMainWindow" name="RaytraceGUIClass" >
-  <property name="objectName" >
-   <string notr="true">RaytraceGUIClass</string>
-  </property>
-  <property name="geometry" >
+ <widget class="QMainWindow" name="RaytraceGUIClass">
+  <property name="geometry">
    <rect>
-	<x>0</x>
-	<y>0</y>
-	<width>600</width>
-	<height>400</height>
+    <x>0</x>
+    <y>0</y>
+    <width>925</width>
+    <height>777</height>
    </rect>
   </property>
-  <property name="windowTitle" >
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="mouseTracking">
+   <bool>false</bool>
+  </property>
+  <property name="windowTitle">
    <string>RaytraceGUI</string>
   </property>
-  <widget class="QMenuBar" name="menuBar" />
-  <widget class="QToolBar" name="mainToolBar" />
-  <widget class="QWidget" name="centralWidget" />
-  <widget class="QStatusBar" name="statusBar" />
+  <property name="documentMode">
+   <bool>false</bool>
+  </property>
+  <property name="dockNestingEnabled">
+   <bool>false</bool>
+  </property>
+  <property name="dockOptions">
+   <set>QMainWindow::AllowTabbedDocks|QMainWindow::AnimatedDocks</set>
+  </property>
+  <widget class="QWidget" name="centralWidget">
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
+   <layout class="QHBoxLayout" name="horizontalLayout">
+    <item>
+     <widget class="QLabel" name="renderArea">
+      <property name="frameShape">
+       <enum>QFrame::WinPanel</enum>
+      </property>
+      <property name="frameShadow">
+       <enum>QFrame::Plain</enum>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+      <property name="scaledContents">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QScrollArea" name="scrollArea_2">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Fixed" vsizetype="Expanding">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="minimumSize">
+       <size>
+        <width>250</width>
+        <height>0</height>
+       </size>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>250</width>
+        <height>16777215</height>
+       </size>
+      </property>
+      <property name="widgetResizable">
+       <bool>true</bool>
+      </property>
+      <widget class="QWidget" name="settingsLayout">
+       <property name="geometry">
+        <rect>
+         <x>0</x>
+         <y>0</y>
+         <width>248</width>
+         <height>737</height>
+        </rect>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout">
+        <item>
+         <widget class="QGroupBox" name="sceneSettings">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="title">
+           <string>Scene Settings</string>
+          </property>
+          <layout class="QFormLayout" name="formLayout">
+           <property name="fieldGrowthPolicy">
+            <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
+           </property>
+           <item row="0" column="1">
+            <widget class="QLineEdit" name="sceneNameText">
+             <property name="readOnly">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="0">
+            <widget class="QPushButton" name="pushButton_2">
+             <property name="text">
+              <string>Scene</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <widget class="QGroupBox" name="previewSettings">
+          <property name="title">
+           <string>Preview Settings</string>
+          </property>
+          <layout class="QFormLayout" name="formLayout_2">
+           <item row="3" column="0">
+            <widget class="QLabel" name="label">
+             <property name="text">
+              <string>Multisamples</string>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="1">
+            <widget class="QSpinBox" name="previewMultisampleCount"/>
+           </item>
+           <item row="1" column="1">
+            <widget class="QComboBox" name="previewCamera"/>
+           </item>
+           <item row="1" column="0">
+            <widget class="QLabel" name="labelCamera">
+             <property name="text">
+              <string>Camera</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <widget class="QGroupBox" name="outputSettings">
+          <property name="title">
+           <string>Output Settings</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QWidget" name="widget" native="true">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QStatusBar" name="statusBar"/>
  </widget>
- <layoutDefault spacing="6" margin="11" />
- <pixmapfunction></pixmapfunction>
+ <layoutdefault spacing="6" margin="11"/>
  <resources>
-   <include location="raytracegui.qrc"/>
+  <include location="raytracegui.qrc"/>
  </resources>
- <connections/>
-</UI>
+ <connections>
+  <connection>
+   <sender>RaytraceGUIClass</sender>
+   <signal>sceneChanged(QString)</signal>
+   <receiver>sceneNameText</receiver>
+   <slot>setText(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>919</x>
+     <y>23</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>826</x>
+     <y>54</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>previewMultisampleCount</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>RaytraceGUIClass</receiver>
+   <slot>previewSetMultisamples(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>808</x>
+     <y>107</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>764</x>
+     <y>-17</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>RaytraceGUIClass</sender>
+   <signal>previewMultisamplesChanged(int)</signal>
+   <receiver>previewMultisampleCount</receiver>
+   <slot>setValue(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>851</x>
+     <y>3</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>851</x>
+     <y>113</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton_2</sender>
+   <signal>pressed()</signal>
+   <receiver>RaytraceGUIClass</receiver>
+   <slot>openScene()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>723</x>
+     <y>53</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>462</x>
+     <y>388</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>previewCamera</sender>
+   <signal>currentIndexChanged(QString)</signal>
+   <receiver>RaytraceGUIClass</receiver>
+   <slot>previewSetCamera(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>823</x>
+     <y>119</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>462</x>
+     <y>388</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <signal>sceneChanged(QString)</signal>
+  <signal>previewMultisamplesChanged(int)</signal>
+  <signal>previewCameraChanged(QString)</signal>
+  <slot>openScene()</slot>
+  <slot>previewSetMultisamples(int)</slot>
+  <slot>previewRefresh()</slot>
+  <slot>previewSetCamera(QString)</slot>
+  <slot>previewOutputRefresh()</slot>
+  <slot>updatePreviewOutput()</slot>
+ </slots>
+</ui>

@@ -21,10 +21,14 @@
 
 #include <RaytraceScene.h>
 #include <RaytraceCamera.h>
-#include <RaytraceLight.h>
+#include <RaytraceMaterial.h>
+#include <RaytraceTriMesh.h>
+#include <RaytraceOutput.h>
 #include <RaytraceObject.h>
 #include <RaytraceXmlParser.h>
 
 #include <QtGui/QApplication>
+#include <QtGui/QFileDialog.h>
+#include <QtGui>
 
 #endif

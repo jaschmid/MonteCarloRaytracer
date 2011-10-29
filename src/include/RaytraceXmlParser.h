@@ -10,3 +10,33 @@
 // a letter to Creative Commons, 444 Castro Street, 
 // Suite 900, Mountain View, California, 94041, USA.
 /********************************************************/
+
+#if defined(_MSC_VER) && (_MSC_VER >= 1020)
+#pragma once
+#endif
+
+#ifndef RAYTRACE_XMLPARSER_GUARD
+#define RAYTRACE_XMLPARSER_GUARD
+
+#include <RaytraceCommon.h>
+
+namespace Raytrace {
+
+/******************************************/
+// Raytracer Scene Interface
+/******************************************/
+//
+/******************************************/
+	
+	extern XmlParser CreateXmlParser();
+
+	class IXmlParser : public virtual IBase
+	{
+	public:
+		virtual String GetError() const = 0;
+		virtual Result ParseFile(const String& path,Scene& output) = 0;
+	};
+
+}
+
+#endif

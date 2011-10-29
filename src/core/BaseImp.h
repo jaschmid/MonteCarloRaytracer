@@ -1,6 +1,6 @@
 /********************************************************/
-// FILE: RaytraceScene.h
-// DESCRIPTION: Raytracer exported Scene interface
+// FILE: BaseImp.h
+// DESCRIPTION: Raytracer Base Reference Counting Implementation
 // AUTHOR: Jan Schmid (jaschmid@eml.cc)    
 /********************************************************/
 // This work is licensed under the Creative Commons 
@@ -15,28 +15,37 @@
 #pragma once
 #endif
 
-#ifndef RAYTRACE_SCENE_GUARD
-#define RAYTRACE_SCENE_GUARD
+#ifndef RAYTRACE_BASE_IMP_GUARD
+#define RAYTRACE_BASE_IMP_GUARD
 
 #include <RaytraceCommon.h>
-#include <RaytracePropertySet.h>
-#include <RaytraceObject.h>
 
 namespace Raytrace {
-
-/******************************************/
-// Raytracer Scene Interface
-/******************************************/
-//
-/******************************************/
 	
-	extern Scene CreateScene(const String& name = String());
-
-	class IScene : public virtual IPropertySet, public virtual IObjectContainer
+	template<class _Final,class _Base> class BaseImp : public _Base
 	{
 	public:
 
-		virtual const String& GetName() const = 0;
+		BaseImp() : _count(0)
+		{
+		}
+		
+		virtual ~BaseImp()
+		{
+		}
+
+		inline void AddRef()
+		{
+			++_count;
+		}
+		inline void Release()
+		{
+			if(--_count == 0)
+				delete this;
+		}
+
+	protected:
+		unsigned int					_count;
 	};
 
 }

@@ -12,8 +12,42 @@ public:
 	RaytraceGUI(QWidget *parent = 0, Qt::WFlags flags = 0);
 	~RaytraceGUI();
 
+
+public slots:
+	void		openScene();
+	void		previewRefresh();
+	void		previewSetMultisamples(int samples);
+	void		previewSetCamera(QString camera);
+	void		updatePreviewOutput();
+	void		previewOutputRefresh();
+
+signals:
+
+	void		sceneChanged(QString);
+	void		previewMultisamplesChanged(int);
+	void		previewCameraChanged(QString);
+
 private:
-	Ui::RaytraceGUIClass ui;
+
+	void openScene(const Raytrace::String& sceneFile);
+
+	void updateSceneUI();
+
+	void changePreviewCamera(Raytrace::Camera camera);
+	void updatePreviewUI();
+	void changeRenderCamera(Raytrace::Camera camera);
+
+	std::auto_ptr<QImage>	_outputImage;
+
+	Ui::RaytraceGUIClass	_ui;
+
+	Raytrace::Scene			_scene;
+
+	Raytrace::Camera		_previewCamera;
+	Raytrace::Output		_previewOutput;
+	bool					_previewCompleted;
+
+	Raytrace::Camera		_renderCamera;
 };
 
 #endif // RAYTRACEGUI_H

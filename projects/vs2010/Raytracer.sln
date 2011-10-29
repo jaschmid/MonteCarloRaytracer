@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{E66BDB28-1563-4457-8910-9CF79177BE61}"
 	ProjectSection(SolutionItems) = preProject
-		..\..\..\Readme.txt = ..\..\..\Readme.txt
+		..\..\Readme.txt = ..\..\Readme.txt
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "RaytraceCore", "RaytraceCore.vcxproj", "{986D06E8-571A-47A6-B923-DB2A0F3D6F28}"
