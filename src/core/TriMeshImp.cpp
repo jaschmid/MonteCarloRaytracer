@@ -34,11 +34,11 @@ int TriMeshImp::PushTriangle(int vertex1,int vertex2,int vertex3,Material materi
 		}
 	if(material_index == -1)
 	{
-		material_index = _triangleMaterials.size();
+		material_index = _materials.size();
 		_materials.push_back(material);
 	}
 
-	_triangleVertices.push_back(Math::Vector3<int>(vertex1,vertex2,vertex3));
+	_triangleVertices.push_back(Vector3i(vertex1,vertex2,vertex3));
 	_triangleMaterials.push_back(material_index);
 	return _triangleVertices.size() - 1;
 }

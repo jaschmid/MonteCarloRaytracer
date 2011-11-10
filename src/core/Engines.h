@@ -21,6 +21,9 @@
 
 #include <boost/shared_ptr.hpp>
 #include <RaytraceCommon.h>
+#include <RaytraceOutput.h>
+#include <RaytraceCamera.h>
+#include <RaytraceScene.h>
 #include "EngineBase.h"
 #include "ImageWriter.h"
 
@@ -33,11 +36,20 @@ struct GenericEngineSettings
 	int		_nDataSize;
 	int		_iXResolution;
 	int		_iYResolution;
-	::Math::IMAGE_FORMAT	_format;
+	IMAGE_FORMAT	_format;
 	Scene	_scene;
+	Camera	_camera;
+	Output	_output;
 };
 
+
+static const String RenderingEngineDummy = "Dummy";
+static const String RenderingEngineSimple = "Simple";
+static const String RenderingEngineFast = "Fast";
+
 boost::shared_ptr<RaytraceEngineBase>	CreateDummyEngine(const GenericEngineSettings& settings);
+boost::shared_ptr<RaytraceEngineBase>	CreateSimpleEngine(const GenericEngineSettings& settings);
+boost::shared_ptr<RaytraceEngineBase>	CreateFastEngine(const GenericEngineSettings& settings);
 
 }
 

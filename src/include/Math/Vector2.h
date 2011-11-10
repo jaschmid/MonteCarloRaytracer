@@ -5,7 +5,7 @@
 /********************************************************/ 
 
 #include "MathTypes.h"
-
+#include "VectorBase.h"
 
 #ifndef Raytrace_MATH_VECTOR2_H_INCLUDED
 #define Raytrace_MATH_VECTOR2_H_INCLUDED
@@ -13,110 +13,56 @@
 namespace Math {
 
 
-template<typename _T> struct Vector2
+template<typename _T> struct Vector2 : public BaseVector<_T,2>
 {
+protected:
+	typedef BaseVector<_T,2> Base;
 public:
-	union
-	{
-		_T c[2];
-		struct
-		{
-			_T x,y;
-		};
-	};
+	typedef Vector2<_T> ThisType;
 
-	// access functions
+	// access operations
 
-	_T& operator[](const up& i)
+	inline _T& x()
 	{
-		return c[i];
+		return Base::operator[](0);
+	}
+	inline _T& y()
+	{
+		return Base::operator[](1);
 	}
 
 	// const access functions
-
-	const _T& operator[](const up& i) const
+	
+	inline const _T& x() const
 	{
-		return c[i];
+		return Base::operator[](0);
 	}
-
-	// comparison operators
-
-	bool operator == (const Vector2<_T>& other) const
+	inline const _T& y() const
 	{
-		return x == other.x && y == other.y;
-	}
-	bool operator != (const Vector2<_T>& other) const
-	{
-		return x != other.x || y != other.y;
+		return Base::operator[](1);
 	}
 
 	// constructors
 
-	Vector2(const _T& _1,const _T& _2) : x(_1),y(_2)
+	inline ThisType(const _T& _1,const _T& _2) : Base(typename Base::Base(_1,_2))
 	{
 	}
 
-	template<class _T2> Vector2(_T2 _1,_T2 _2) : x((const _T&)_1),y((const _T&)_2)
+	template<class _T2> inline ThisType(const Vector2<_T2>& _v) : Base(typename Base::Base((_T)_v.x,(_T)_v.y))
 	{
 	}
 
-	Vector2(){};
-
-	// math operations
-	// scalar
-
-	template<class _T2> Vector2<_T> operator *(const _T2& v) const
+	template<class _T2> inline ThisType(const _T2& _1,const _T2& _2) : Base(typename Base::Base((_T)_1,(_T)_2))
 	{
-		return Vector2<_T>(c[0] * (_T)v,c[1] * (_T)v);
 	}
 
-	template<class _T2> Vector2<_T> operator /(const _T2& v) const
+	inline ThisType()
 	{
-		return Vector2<_T>(c[0] / (_T)v,c[1] / (_T)v);
 	}
 
-	// vector
-
-	template<class _T2> Vector2<_T> operator +(const Vector2<_T2>& v) const
+	inline ThisType(const Base& _v) : Base(typename Base::Base(_v))
 	{
-		return Vector2<_T>(c[0] + (_T)v[0],c[1] + (_T)v[1]);
 	}
-
-	template<class _T2> Vector2<_T> operator -(const Vector2<_T2>& v) const
-	{
-		return Vector2<_T>(c[0] - (_T)v[0],c[1] - (_T)v[1]);
-	}
-
-	template<class _T2> Vector2<_T> operator &(const Vector2<_T2>& v) const
-	{
-		return Vector2<_T>(c[0] * (_T)v[0],c[1] * (_T)v[1]);
-	}
-
-	template<class _T2> Vector2<_T> operator |(const Vector2<_T2>& v) const
-	{
-		return Vector2<_T>(c[0] / (_T)v[0],c[1] / (_T)v[1]);
-	}
-
-	template<class _T2> _T operator *(const Vector2<_T2>& v) const
-	{
-		return _T(c[0] * (_T)v[0] + c[1] * (_T)v[1]);
-	}
-
-	template<class _T2> _T operator %(const Vector2<_T2>& v) const
-	{
-		return _T(c[0] * (_T)v[1] - c[0] * (_T)v[1]);
-	}
-
-	_T& operator!() const
-	{
-		return c[0]*c[0]+c[1]*c[1];
-	}
-
-	Vector2<_T>& operator-() const
-	{
-		return Vector2<_T>(-c[0],-c[1]);
-	}
-
 };
 
 }

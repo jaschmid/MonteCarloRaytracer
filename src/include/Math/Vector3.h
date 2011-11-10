@@ -5,6 +5,7 @@
 /********************************************************/ 
 
 #include "MathTypes.h"
+#include "VectorBase.h"
 #include "Vector2.h"
 
 
@@ -15,180 +16,82 @@ namespace Math {
 
 
 
-template<typename _T> struct Vector3
+template<typename _T> struct Vector3 : public BaseVector<_T,3>
 {
+protected:
+	typedef BaseVector<_T,3> Base;
+	typedef typename Base::Base EigenBase;
 public:
-	union
-	{
-		_T c[3];
-		struct
-		{
-			_T x,y,z;
-		};
-	};
+	typedef Vector3<_T> ThisType;
 
-	// access functions
+	// access operations
 
-	Vector2<_T>& xy()
+	inline _T& x()
 	{
-		return *(Vector2<_T>*)&c[0];
+		return Base::operator[](0);
 	}
-	Vector2<_T>& yz()
+	inline _T& y()
 	{
-		return *(Vector2<_T>*)&c[1];
+		return Base::operator[](1);
 	}
-	_T& operator[](const up& i)
+	inline _T& z()
 	{
-		return c[i];
+		return Base::operator[](2);
 	}
 
 	// const access functions
+	
+	inline const _T& x() const
+	{
+		return Base::operator[](0);
+	}
+	inline const _T& y() const
+	{
+		return Base::operator[](1);
+	}
+	inline const _T& z() const
+	{
+		return Base::operator[](2);
+	}
 
-	const Vector2<_T>& xy() const
+	// conversion
+
+	inline operator Vector2<_T>() const
 	{
-		return *(const Vector2<_T>*)&c[0];
-	}
-	const Vector2<_T>& yz() const
-	{
-		return *(const Vector2<_T>*)&c[1];
-	}
-	const Vector2<_T>& xz() const
-	{
-		return Vector2<_T>(c[0],c[1]);
-	}
-	const _T& operator[](const up& i) const
-	{
-		return c[i];
+		return Vector2<_T>(x(),y());
 	}
 
 	// constructors
 
-	Vector3(const _T& _1,const _T& _2,const _T& _3) : x(_1),y(_2),z(_3)
+	inline ThisType(const _T& _1,const _T& _2,const _T& _3) : Base(typename Base::Base(_1,_2,_3))
 	{
 	}
 
-	template<class _T2> Vector3(const _T2& _1,const _T2& _2,const _T2& _3) : x((const _T&)_1),y((const _T&)_2),z((const _T&)_3)
-	{
-	}
-
-	template<class _T2> Vector3(const Vector2<_T2>& _v,const _T2& _3) : x((const _T&)_v.x),y((const _T&)_v.y),z((const _T&)_3)
-	{
-	}
-
-	template<class _T2> Vector3(const _T2& _1,const Vector2<_T2>& _v) : x((const _T&)_1),y((const _T&)_v.x),z((const _T&)_v.y)
+	template<class _T2> inline ThisType(const Vector2<_T2>& _v,const _T2& _3) : Base(typename Base::Base((_T)_v.x,(_T)_v.y,(_T)_3))
 	{
 	}
 	
-	template<class _T2> Vector3(const Vector3<_T2>& _v) : x((const _T&)_v.x),y((const _T&)_v.y),z((const _T&)_v.z)
+	template<class _T2> inline ThisType(const Vector3<_T2>& _v) : Base(typename Base::Base((_T)_v.x,(_T)_v.y,(_T)_v.z))
 	{
 	}
 
-	Vector3(){};
-
-	//comparison
-
-	bool operator ==(const Vector3<_T>& v2)
+	template<class _T2> inline ThisType(const _T2& _1,const _T2& _2,const _T2& _3) : Base(typename Base::Base((_T)_1,(_T)_2,(_T)_3))
 	{
-		return (x==v2.x) && (y==v2.y) && (z==v2.z);
-	}
-	
-	template<class _T2> Vector3<_T>& operator = (const Vector3<_T2>& _v) 
-	{
-		x = ((const _T&)_v.x);
-		y = ((const _T&)_v.y);
-		z = ((const _T&)_v.z);
-		return *this;
 	}
 
-	// math operations
-	// scalar
-
-	template<class _T2> Vector3<_T> operator *(const _T2& v) const
+	inline ThisType()
 	{
-		return Vector3<_T>(c[0] * (_T)v,c[1] * (_T)v,c[2] * (_T)v);
 	}
 
-	template<class _T2> Vector3<_T> operator /(const _T2& v) const
+	inline ThisType(const Base& _v) : Base(typename Base::Base(_v))
 	{
-		return Vector3<_T>(c[0] / (_T)v,c[1] / (_T)v,c[2] / (_T)v);
 	}
 
-	// vector
+	// special
 
-	template<class _T2> Vector3<_T> operator +(const Vector3<_T2>& v) const
+	inline ThisType operator%(const ThisType& other) const
 	{
-		return Vector3<_T>(c[0] + (_T)v[0],c[1] + (_T)v[1], c[2] + (_T)v[2]);
-	}
-
-	template<class _T2> Vector3<_T> operator -(const Vector3<_T2>& v) const
-	{
-		return Vector3<_T>(c[0] - (_T)v[0],c[1] - (_T)v[1], c[2] - (_T)v[2]);
-	}
-
-	template<class _T2> Vector3<_T> operator &(const Vector3<_T2>& v) const
-	{
-		return Vector3<_T>(c[0] * (_T)v[0],c[1] * (_T)v[1], c[2] * (_T)v[2]);
-	}
-
-	template<class _T2> Vector3<_T> operator |(const Vector3<_T2>& v) const
-	{
-		return Vector3<_T>(c[0] / (_T)v[0],c[1] / (_T)v[1], c[2] / (_T)v[2]);
-	}
-
-	template<class _T2> Vector3<_T> operator +=(const Vector3<_T2>& v)
-	{
-		c[0]+=v.c[0];c[1]+=v.c[1];c[2]+=v.c[2];
-		return *this;
-	}
-	template<class _T2> Vector3<_T> operator -=(const Vector3<_T2>& v)
-	{
-		c[0]-=v.c[0];c[1]-=v.c[1];c[2]-=v.c[2];
-		return *this;
-	}
-	template<class _T2> Vector3<_T> operator &=(const Vector3<_T2>& v)
-	{
-		c[0]*=v.c[0];c[1]*=v.c[1];c[2]*=v.c[2];
-		return *this;
-	}
-	template<class _T2> Vector3<_T> operator |=(const Vector3<_T2>& v)
-	{
-		c[0]/=v.c[0];c[1]/=v.c[1];c[2]/=v.c[2];
-		return *this;
-	}
-
-	template<class _T2> _T operator *(const Vector3<_T2>& v) const
-	{
-		return (_T)(c[0] * (_T)v[0] + c[1] * (_T)v[1] + c[2] * (_T)v[2]);
-	}
-
-	template<class _T2> Vector3<_T> operator %(const Vector3<_T2>& v) const
-	{
-		return Vector3<_T>(c[1] * (_T)v[2] - c[2] * (_T)v[1], c[2] * (_T)v[0] - c[0] * (_T)v[2], c[0] * (_T)v[1] - c[1] * (_T)v[0]);
-	}
-
-	_T operator!() const
-	{
-		return c[0]*c[0]+c[1]*c[1]+c[2]*c[2];
-	}
-
-	Vector3<_T> operator-() const
-	{
-		return Vector3<_T>(-c[0],-c[1],-c[2]);
-	}
-
-	Vector3<_T> normalize() const
-	{
-		return (*this)/(sqrtf(!(*this)));
-	}
-
-	_T length() const
-	{
-		return sqrt<_T>(!(*this));
-	}
-
-	_T sqLength() const
-	{
-		return !(*this);
+		return ThisType(Base(EigenBase::cross(other)));
 	}
 };
 

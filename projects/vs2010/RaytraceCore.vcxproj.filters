@@ -114,12 +114,6 @@
     <ClInclude Include="..\..\src\include\Math\Vector4.h">
       <Filter>Shared Headers\Math</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\include\preproc.h">
-      <Filter>Shared Headers</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\include\types.h">
-      <Filter>Shared Headers</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\core\BaseImp.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -133,6 +127,60 @@
       <Filter>Header Files\Engine</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\core\ImageWriter.h">
+      <Filter>Header Files\Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\core\SimpleGenerator.h">
+      <Filter>Header Files\Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\core\SimpleIntersector.h">
+      <Filter>Header Files\Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\core\WhittedShader.h">
+      <Filter>Header Files\Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\core\ConcurrentStorage.h">
+      <Filter>Header Files\Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\Math\InterlockedFunctions.h">
+      <Filter>Shared Headers\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\Math\Triangle.h">
+      <Filter>Shared Headers\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\Math\Ray.h">
+      <Filter>Shared Headers\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\Math\VectorBase.h">
+      <Filter>Shared Headers\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\core\MathHelper.h">
+      <Filter>Header Files\Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\preproc.h">
+      <Filter>Shared Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\types.h">
+      <Filter>Shared Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\core\Ray.h">
+      <Filter>Header Files\Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\core\Triangle.h">
+      <Filter>Header Files\Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\core\SceneReader.h">
+      <Filter>Header Files\Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\core\BVH.h">
+      <Filter>Header Files\Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\core\BVHIntersector.h">
+      <Filter>Header Files\Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\core\RayData.h">
+      <Filter>Header Files\Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\core\AABB.h">
       <Filter>Header Files\Engine</Filter>
     </ClInclude>
   </ItemGroup>
@@ -179,11 +227,20 @@
     <ClCompile Include="..\..\src\core\DummyEngine.cpp">
       <Filter>Source Files\Engine</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\core\WhittedEngine.cpp">
-      <Filter>Source Files\Engine</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\core\EngineBase.cpp">
       <Filter>Source Files\Engine</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\core\SimpleEngine.cpp">
+      <Filter>Source Files\Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\core\ImageWriter.cpp">
+      <Filter>Source Files\Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\core\FastEngine.cpp">
+      <Filter>Source Files\Engine</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ClassDiagram1.cd" />
   </ItemGroup>
 </Project>

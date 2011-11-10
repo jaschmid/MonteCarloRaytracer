@@ -63,6 +63,13 @@ namespace Raytrace {
 		virtual void SetMultisampleCount(const int& count) = 0;
 		virtual int GetMultisampleCount() const = 0;
 
+		//property RenderingEngine/String
+		virtual void SetRenderingEngine(const String& renderer) = 0;
+		virtual String GetRenderingEngine() const = 0;
+
+		virtual int GetNumRenderingEngines() const = 0;
+		virtual String GetRenderingEngineName(int i) const = 0;
+
 		static RObjectType ObjectType;
 	};
 

@@ -102,6 +102,8 @@ namespace Raytrace {
 		String	_type;
 		String	_bokehType;
 		Real	_bokehRotation;
+	public:
+		EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 	};
 
 };

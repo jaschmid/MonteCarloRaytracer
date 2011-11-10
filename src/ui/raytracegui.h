@@ -18,6 +18,7 @@ public slots:
 	void		previewRefresh();
 	void		previewSetMultisamples(int samples);
 	void		previewSetCamera(QString camera);
+	void		previewSetRenderingEngine(QString engine);
 	void		updatePreviewOutput();
 	void		previewOutputRefresh();
 

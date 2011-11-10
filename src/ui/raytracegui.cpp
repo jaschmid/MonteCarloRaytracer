@@ -66,8 +66,18 @@ void RaytraceGUI::openScene(const Raytrace::String& string)
 void RaytraceGUI::previewOutputRefresh()
 {
 	int width,height;
+
 	width = _ui.renderArea->size().width();
 	height = _ui.renderArea->size().height();
+	
+
+#ifdef _DEBUG
+	width/=4;
+	height/=4;
+#endif
+
+	width -= 1;
+	height -= 1;
 
 	if(!_outputImage.get() || (_outputImage->width() != width || _outputImage->height() != height) )
 	{
@@ -77,6 +87,8 @@ void RaytraceGUI::previewOutputRefresh()
 
 	if(_previewOutput.get())
 		_previewOutput->SetOutputSurface( _outputImage->bits() , _outputImage->byteCount(), _outputImage->width(), _outputImage->height(), Raytrace::IOutput::FORMAT_A8R8G8B8);
+
+	_previewCompleted = false;
 
 	updatePreviewOutput();
 }
@@ -104,8 +116,13 @@ void RaytraceGUI::updatePreviewOutput()
 		}
 		else if(res == Raytrace::Result::RenderingInProgress)
 			_ui.statusBar->showMessage(QString( Raytrace::String( Raytrace::String("Rendering In Progress") ).c_str()));
+		else if(res == Raytrace::Result::Failed)
+			_ui.statusBar->showMessage(QString( Raytrace::String( Raytrace::String("Rendering Not Ready Yet") ).c_str()));
 		
-		_ui.renderArea->setPixmap(QPixmap::fromImage(*_outputImage));
+		_ui.renderArea->setPixmap(nullptr);
+		_ui.renderArea->setPixmap(QPixmap::fromImage( _outputImage->scaled( _ui.renderArea->size()) ) );
+		//_ui.renderArea->resize( _outputImage->width(), _outputImage->height() );
+
 	}
 
 }
@@ -121,10 +138,33 @@ void RaytraceGUI::previewSetMultisamples(int count)
 
 void		RaytraceGUI::previewRefresh()
 {
+	if(_previewOutput.get() != nullptr)
+	{
+		_previewCompleted = false;
+		_previewOutput->Refresh();
+	}
 }
 
 void		RaytraceGUI::previewSetCamera(QString camera)
 {
+	if(_scene.get() != nullptr)
+	{
+		Raytrace::Camera cameraObject = _scene->GetObject(camera.toStdString());
+		if(cameraObject.get() != nullptr)
+		{
+			changePreviewCamera(cameraObject);
+		}
+	}
+}
+
+
+void		RaytraceGUI::previewSetRenderingEngine(QString engine)
+{
+	if(_previewOutput.get() != nullptr)
+	{
+		_previewOutput->SetRenderingEngine(engine.toStdString());
+		previewRefresh();
+	}
 }
 
 void RaytraceGUI::updateSceneUI()
@@ -183,11 +223,19 @@ void RaytraceGUI::updatePreviewUI()
 	{
 		_ui.previewMultisampleCount->setEnabled(true);
 		_ui.previewMultisampleCount->setValue(_previewOutput->GetMultisampleCount());
+		_ui.previewRefreshButton->setEnabled(true);
+		_ui.previewRenderingEngine->setEnabled(true);
+		_ui.previewRenderingEngine->clear();
+		for(int i = 0; i < _previewOutput->GetNumRenderingEngines(); ++i)
+			_ui.previewRenderingEngine->addItem( QString( _previewOutput->GetRenderingEngineName(i).c_str() ) );
 	}
 	else
 	{
 		_ui.previewMultisampleCount->setEnabled(false);
 		_ui.previewMultisampleCount->setValue(0);
+		_ui.previewRefreshButton->setEnabled(false);
+		_ui.previewRenderingEngine->setEnabled(false);
+		_ui.previewRenderingEngine->clear();
 	}
 }
 

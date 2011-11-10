@@ -23,9 +23,10 @@
 #include <RaytraceCommon.h>
 #include <types.h>
 #include <array>
+#include <vector>
 
 
-namespace Math {
+namespace Raytrace {
 
 	//basically the editable image code stolen from HAGE
 
@@ -35,6 +36,7 @@ namespace Math {
 		R5G6B5,
 		R8G8B8A8,
 		A8R8G8B8,
+		RGBA_FLOAT32,
 		DXTC1,
 		DXTC3,
 		DXTC5
@@ -183,6 +185,51 @@ namespace Math {
 		u16 data;
 	};
 
+	template<> class Pixel<RGBA_FLOAT32>
+	{
+	public:
+
+		Pixel(){}
+		Pixel(f32 r,f32 g,f32 b,f32 a):_data(r,g,b,a) {assert(r <= RedMax);assert(g <= GreenMax);assert(b <= BlueMax);}
+		Pixel(const ::Eigen::Matrix<f32,4,1>& color):_data(color) {}
+
+		f32 Red() const {return _data.x();}
+		f32 Green() const {return _data.y();}
+		f32 Blue() const {return _data.z();}
+		f32 Alpha() const {return _data.w();}
+
+		const ::Eigen::Matrix<f32,4,1>& Data() const {return _data;}
+
+		void SetRed(f32 r) {assert(r <= RedMax); _data.x() = r; }
+		void SetGreen(f32 g) {assert(g <= GreenMax); _data.y() = g; }
+		void SetBlue(f32 b) {assert(b <= BlueMax); _data.z() = b; }
+		void SetAlpha(f32 a) {assert(a <= BlueMax); _data.w() = a; }
+		void SetData(const ::Eigen::Matrix<f32,4,1>& d) {_data=d;}
+
+		static const f32 RedMax;
+		static const f32 GreenMax;
+		static const f32 BlueMax;
+		static const f32 AlphaMax;
+		
+		template<IMAGE_FORMAT _Out> operator Pixel<_Out>() const
+		{
+			return PixelConverter<RGBA_FLOAT32,_Out>().Convert(*this);
+		}
+		
+		typedef f32 RedType;
+		typedef f32 GreenType;
+		typedef f32 BlueType;
+		typedef f32 AlphaType;
+
+		static const IMAGE_FORMAT Format = RGBA_FLOAT32;
+
+	private:
+
+		::Eigen::Matrix<f32,4,1> _data;
+	public:
+		EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+	};
+	
 	template<IMAGE_FORMAT source,IMAGE_FORMAT dest> class PixelConverter
 	{
 	public:
@@ -304,6 +351,21 @@ namespace Math {
 			}
 		};
 	};
+
+	template<IMAGE_FORMAT dest> class PixelConverter<RGBA_FLOAT32,dest>
+	{
+	public:
+		static typename Pixel<dest> Convert(typename const Pixel<RGBA_FLOAT32>& s)
+		{
+			Pixel<R8G8B8A8> i;
+			i.SetRed((u8)(s.Red()*255.0f));
+			i.SetGreen((u8)(s.Green()*255.0f));
+			i.SetBlue((u8)(s.Blue()*255.0f));
+			i.SetAlpha((u8)(s.Alpha()*255.0f));
+			return PixelConverter<dest,R8G8B8A8>::Convert(i);
+		}
+	};
+
 
 	
 	template<bool Alpha = true> class DXTC1Block
@@ -453,8 +515,8 @@ namespace Math {
 		typedef Pixel<_format> PixelType;
 		
 		/*public coonstructors*/
-		ConstImageRect(const void* pData,const Vector2<u32>& size,const u32& stride):
-			_rect(0,0,size.x,size.y),_data((const PixelType*)pData),_size(size.x,size.y),_stride(stride)
+		ConstImageRect(const void* pData,const Vector2u& size,const u32& stride):
+			_rect(0,0,size.x(),size.y()),_data((const PixelType*)pData),_size(size.x(),size.y()),_stride(stride)
 		{
 		}
 
@@ -464,20 +526,20 @@ namespace Math {
 		u32 XSize() const{return _size.x;}
 		u32 YSize() const{return _size.y;}
 		
-		ConstImageRect<_format> Rect(const Vector4<u32>& sub) const
+		ConstImageRect<_format> Rect(const Vector4u& sub) const
 		{
 			assert(sub.x < sub.z);
 			assert(sub.y < sub.w);
 			assert(sub.z <= XSize());
 			assert(sub.w <= YSize());
-			return ConstImageRect<_format>(_data,Vector4<u32>(sub.x+_rect.x,sub.y+_rect.y,sub.z+_rect.x,sub.w+_rect.y),_stride);
+			return ConstImageRect<_format>(_data,Vector4i(sub.x+_rect.x,sub.y+_rect.y,sub.z+_rect.x,sub.w+_rect.y),_stride);
 		}
 
 	private:
 
 
 		/*private coonstructors*/
-		ConstImageRect(const PixelType* pData,const Vector4<u32>& rect,const u32& stride):
+		ConstImageRect(const PixelType* pData,const Vector4u& rect,const u32& stride):
 			_rect(rect),_data(pData),_size(rect.z-rect.x,rect.w-rect.y),_stride(stride)
 		{
 		}
@@ -486,13 +548,15 @@ namespace Math {
 		const PixelType& getPixel(u32 x,u32 y) const {return _data[(y+_rect.y)*stride+(x+rect.x)];}
 
 		/*private members*/
-		const Vector2<u32>	_size;
-		const Vector4<u32>	_rect;
+		const Vector2u	_size;
+		const Vector4u	_rect;
 		const u32			_stride;
 		const PixelType*	_data;
 
 		template<class _PixelType> friend class UncompressedImageData;
 		template<IMAGE_FORMAT _format2> friend class ImageRect;
+	public:
+		EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 	};
 
 	template<IMAGE_FORMAT _format> class ImageRect
@@ -503,8 +567,8 @@ namespace Math {
 		typedef Pixel<_format> PixelType;
 		
 		/*public coonstructors*/
-		ImageRect(void* pData,const Vector2<u32>& size,u32 stride):
-			_rect(0,0,size.x,size.y),_data((PixelType*)pData),_size(size.x,size.y),_stride(stride)
+		ImageRect(void* pData,const Vector2u& size,u32 stride):
+			_rect(0,0,size.x(),size.y()),_data((PixelType*)pData),_size(size.x(),size.y()),_stride(stride)
 		{
 		}
 
@@ -514,8 +578,8 @@ namespace Math {
 			assert(source.XSize() == XSize());
 			assert(source.YSize() == YSize());
 			
-			for(u32 y = 0; y < _size.y; ++y)
-				for(u32 x = 0; x < _size.x; ++x)
+			for(u32 y = 0; y < _size.y(); ++y)
+				for(u32 x = 0; x < _size.x(); ++x)
 					getPixel(x,y) = PixelConverter<_format,_format2>::Convert(source.getPixel(x,y));
 		}
 		
@@ -524,8 +588,8 @@ namespace Math {
 			assert(source.XSize() == XSize());
 			assert(source.YSize() == YSize());
 			
-			for(u32 y = 0; y < _size.y; ++y)
-				for(u32 x = 0; x < _size.x; ++x)
+			for(u32 y = 0; y < _size.y(); ++y)
+				for(u32 x = 0; x < _size.x(); ++x)
 					getPixel(x,y) = source.getPixel(x,y);
 		}
 
@@ -534,8 +598,8 @@ namespace Math {
 			assert(source.XSize() == XSize());
 			assert(source.YSize() == YSize());
 			
-			for(u32 y = 0; y < _size.y; ++y)
-				for(u32 x = 0; x < _size.x; ++x)
+			for(u32 y = 0; y < _size.y(); ++y)
+				for(u32 x = 0; x < _size.x(); ++x)
 					getPixel(x,y) = PixelConverter<_format,_format2>::Convert(source.getPixel(x,y));
 		}
 		
@@ -544,32 +608,32 @@ namespace Math {
 			assert(source.XSize() == XSize());
 			assert(source.YSize() == YSize());
 			
-			for(u32 y = 0; y < _size.y; ++y)
-				for(u32 x = 0; x < _size.x; ++x)
+			for(u32 y = 0; y < _size.y(); ++y)
+				for(u32 x = 0; x < _size.x(); ++x)
 					getPixel(x,y) = source.getPixel(x,y);
 		}
 
-		PixelType& operator()(u32 x,u32 y) {assert(x<_size.x); assert(y<_size.y); return getPixel(x,y);}
-		const PixelType& operator()(u32 x,u32 y) const {assert(x<_size.x); assert(y<_size.y); return getPixel(x,y);}
-		u32 XSize() const{return _size.x;}
-		u32 YSize() const{return _size.y;}
+		PixelType& operator()(u32 x,u32 y) {assert(x<_size.x()); assert(y<_size.y()); return getPixel(x,y);}
+		const PixelType& operator()(u32 x,u32 y) const {assert(x<_size.x()); assert(y<_size.y()); return getPixel(x,y);}
+		u32 XSize() const{return _size.x();}
+		u32 YSize() const{return _size.y();}
 
-		ImageRect<_format> Rect(const Vector4<u32>& sub)
+		ImageRect<_format> Rect(const Vector4u& sub)
 		{
-			assert(sub.x < sub.z);
-			assert(sub.y < sub.w);
-			assert(sub.z <= XSize());
-			assert(sub.w <= YSize());
-			return ImageRect<_format>(_data,Vector4<u32>(sub.x+_rect.x,sub.y+_rect.y,sub.z+_rect.x,sub.w+_rect.y),_stride);
+			assert(sub.x() < sub.z());
+			assert(sub.y() < sub.w());
+			assert(sub.z() <= XSize());
+			assert(sub.w() <= YSize());
+			return ImageRect<_format>(_data,Vector4u(sub.x+_rect.x,sub.y+_rect.y,sub.z+_rect.x,sub.w+_rect.y),_stride);
 		}
 		
-		ConstImageRect<_format> Rect(const Vector4<u32>& sub) const
+		ConstImageRect<_format> Rect(const Vector4u& sub) const
 		{
-			assert(sub.x < sub.z);
-			assert(sub.y < sub.w);
-			assert(sub.z <= XSize());
-			assert(sub.w <= YSize());
-			return ConstImageRect<_format>(_data,Vector4<u32>(sub.x+_rect.x,sub.y+_rect.y,sub.z+_rect.x,sub.w+_rect.y),_stride);
+			assert(sub.x() < sub.z());
+			assert(sub.y() < sub.w());
+			assert(sub.z() <= XSize());
+			assert(sub.w() <= YSize());
+			return ConstImageRect<_format>(_data,Vector4u(sub.x+_rect.x,sub.y+_rect.y,sub.z+_rect.x,sub.w+_rect.y),_stride);
 		}
 
 	private:
@@ -577,22 +641,24 @@ namespace Math {
 
 
 		/*private coonstructors*/
-		ImageRect(PixelType* pData,const Vector4<u32>& rect,const u32& stride):
-			_rect(rect),_data(pData),_size(rect.z-rect.x,rect.w-rect.y),_stride(stride)
+		ImageRect(PixelType* pData,const Vector4u& rect,const u32& stride):
+			_rect(rect),_data(pData),_size(rect.z()-rect.x(),rect.w()-rect.y()),_stride(stride)
 		{
 		}
 
 		/*private functions*/
-		PixelType& getPixel(u32 x,u32 y) {return _data[(y+_rect.y)*_stride+(x+_rect.x)];}
-		const PixelType& getPixel(u32 x,u32 y) const {return _data[(y+_rect.y)*_stride+(x+_rect.x)];}
+		PixelType& getPixel(u32 x,u32 y) {return _data[(y+_rect.y())*_stride+(x+_rect.x())];}
+		const PixelType& getPixel(u32 x,u32 y) const {return _data[(y+_rect.y())*_stride+(x+_rect.x())];}
 
 		/*private members*/
-		const Vector2<u32>	_size;
-		const Vector4<u32>	_rect;
+		const Vector2u	_size;
+		const Vector4u	_rect;
 		const u32			_stride;
 		PixelType*			_data;
 
 		template<class _PixelType> friend class UncompressedImageData;
+	public:
+		EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 	};
 
 	template<class _PixelType> class UncompressedImageData
@@ -631,7 +697,7 @@ namespace Math {
 		u32 XSize() const{return _xSize;}
 		u32 YSize() const{return _ySize;}
 		
-		ImageRect<_PixelType::Format> GetRect(const Vector4<u32>& rect)
+		ImageRect<_PixelType::Format> GetRect(const Vector4u& rect)
 		{
 			assert(rect.x < rect.z);
 			assert(rect.y < rect.w);
@@ -642,10 +708,10 @@ namespace Math {
 
 		ImageRect<_PixelType::Format> GetRect()
 		{
-			return ImageRect<_PixelType::Format>(_Data.data(),Vector4<u32>(0,0,XSize(),YSize()),XSize());
+			return ImageRect<_PixelType::Format>(_Data.data(),Vector4u(0,0,XSize(),YSize()),XSize());
 		}
 
-		ImageRect<_PixelType::Format> GetRect(const Vector4<u32>& rect) const
+		ImageRect<_PixelType::Format> GetRect(const Vector4u& rect) const
 		{
 			assert(rect.x < rect.z);
 			assert(rect.y < rect.w);
@@ -656,7 +722,7 @@ namespace Math {
 
 		ImageRect<_PixelType::Format> GetRect() const
 		{
-			return ConstImageRect<_PixelType::Format>(_Data.data(),Vector4<u32>(0,0,XSize(),YSize()),XSize());
+			return ConstImageRect<_PixelType::Format>(_Data.data(),Vector4u(0,0,XSize(),YSize()),XSize());
 		}
 
 		const void* GetData() const{return _Data.data();}

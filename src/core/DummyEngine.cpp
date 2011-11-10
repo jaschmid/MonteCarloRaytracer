@@ -10,23 +10,25 @@ boost::shared_ptr<RaytraceEngineBase>	CreateDummyEngine(const GenericEngineSetti
 	DummyIntersector		dummyInteresctor;
 	DummyShader				dummyShader;
 
+	SceneReader				sceneReader(settings._scene);
+
 	switch(settings._format)
 	{
-	case ::Math::R8G8B8A8:
+	case R8G8B8A8:
 		{
-			DummySampleGenerator<::Math::ImageRect<::Math::R8G8B8A8>>	dummyGenerator(
-				::Math::ImageRect<::Math::R8G8B8A8>(settings._pDataOut,::Math::Vector2<::Math::u32>(settings._iXResolution,settings._iYResolution),settings._nDataSize/settings._iYResolution/sizeof(::Math::Pixel<::Math::R8G8B8A8>))
+			DummySampleGenerator<ImageRect<R8G8B8A8>>	dummyGenerator(
+				ImageRect<R8G8B8A8>(settings._pDataOut,Vector2u(settings._iXResolution,settings._iYResolution),settings._nDataSize/settings._iYResolution/sizeof(Pixel<R8G8B8A8>))
 				);
 
-			return CreateRaytraceEngine(dummyGenerator,dummyInteresctor,dummyShader);
+			return CreateRaytraceEngine(dummyGenerator,dummyInteresctor,dummyShader,sceneReader);
 		}
-	case ::Math::A8R8G8B8:
+	case A8R8G8B8:
 		{
-			DummySampleGenerator<::Math::ImageRect<::Math::A8R8G8B8>>	dummyGenerator(
-				::Math::ImageRect<::Math::A8R8G8B8>(settings._pDataOut,::Math::Vector2<::Math::u32>(settings._iXResolution,settings._iYResolution),settings._nDataSize/settings._iYResolution/sizeof(::Math::Pixel<::Math::A8R8G8B8>))
+			DummySampleGenerator<ImageRect<A8R8G8B8>>	dummyGenerator(
+				ImageRect<A8R8G8B8>(settings._pDataOut,Vector2u(settings._iXResolution,settings._iYResolution),settings._nDataSize/settings._iYResolution/sizeof(Pixel<A8R8G8B8>))
 				);
 
-			return CreateRaytraceEngine(dummyGenerator,dummyInteresctor,dummyShader);
+			return CreateRaytraceEngine(dummyGenerator,dummyInteresctor,dummyShader,sceneReader);
 		}
 	default:
 		return boost::shared_ptr<RaytraceEngineBase>();

@@ -90,6 +90,9 @@ namespace Raytrace {
 		Real	_translucency;
 		Real	_transmit_filter;
 		Real	_transparency;
+
+	public:
+		EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 	};
 
 };

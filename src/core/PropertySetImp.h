@@ -59,7 +59,7 @@ namespace Raytrace {
 
 	template<> inline bool LexicalCast<String,Vector3>(const Vector3& input,String& output)
 	{
-		output = boost::lexical_cast<String>(input.x) + " " + boost::lexical_cast<String>(input.y) + " " + boost::lexical_cast<String>(input.z);
+		output = boost::lexical_cast<String>(input.x()) + " " + boost::lexical_cast<String>(input.y()) + " " + boost::lexical_cast<String>(input.z());
 		return true;
 	}
 	
@@ -69,15 +69,15 @@ namespace Raytrace {
 		boost::algorithm::split(elements,boost::algorithm::trim_copy(input),boost::algorithm::is_space(),boost::algorithm::token_compress_on);
 		if(elements.size() != 3)
 			return false;
-		output.x = boost::lexical_cast<Real,String>(elements[0]);
-		output.y = boost::lexical_cast<Real,String>(elements[1]);
-		output.z = boost::lexical_cast<Real,String>(elements[2]);
+		output.x() = boost::lexical_cast<Real,String>(elements[0]);
+		output.y() = boost::lexical_cast<Real,String>(elements[1]);
+		output.z() = boost::lexical_cast<Real,String>(elements[2]);
 		return true;
 	}
 	
 	template<> inline bool LexicalCast<String,Vector4>(const Vector4& input,String& output)
 	{
-		output = boost::lexical_cast<String>(input.x) + " " + boost::lexical_cast<String>(input.y) + " " + boost::lexical_cast<String>(input.z) + " " + boost::lexical_cast<String>(input.w);
+		output = boost::lexical_cast<String>(input.x()) + " " + boost::lexical_cast<String>(input.y()) + " " + boost::lexical_cast<String>(input.z()) + " " + boost::lexical_cast<String>(input.w());
 		return true;
 	}
 	
@@ -87,10 +87,10 @@ namespace Raytrace {
 		boost::algorithm::split(elements,boost::algorithm::trim_copy(input),boost::algorithm::is_space(),boost::algorithm::token_compress_on);
 		if(elements.size() != 4)
 			return false;
-		output.x = boost::lexical_cast<Real,String>(elements[0]);
-		output.y = boost::lexical_cast<Real,String>(elements[1]);
-		output.z = boost::lexical_cast<Real,String>(elements[2]);
-		output.w = boost::lexical_cast<Real,String>(elements[3]);
+		output.x() = boost::lexical_cast<Real,String>(elements[0]);
+		output.y() = boost::lexical_cast<Real,String>(elements[1]);
+		output.z() = boost::lexical_cast<Real,String>(elements[2]);
+		output.w() = boost::lexical_cast<Real,String>(elements[3]);
 		return true;
 	}
 

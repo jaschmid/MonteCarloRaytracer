@@ -15,7 +15,7 @@ OutputImp::OutputImp(const String& name) : Base(name),
 	_adaptiveRendering(true),
 	_multisampleCount(1)
 {
-	_engineSettings._format = ::Math::R8G8B8A8;
+	_engineSettings._format = R8G8B8A8;
 	_engineSettings._iXResolution = 0;
 	_engineSettings._iYResolution = 0;
 	_engineSettings._nDataSize = 0;
@@ -44,13 +44,13 @@ Result OutputImp::SetOutputSurface(void* pData, int nDataSize, int xResolution, 
 	switch(format)
 	{
 	case FORMAT_R8G8B8A8:
-		_engineSettings._format = ::Math::R8G8B8A8;
+		_engineSettings._format = R8G8B8A8;
 		break;
 	case FORMAT_A8R8G8B8:
-		_engineSettings._format = ::Math::A8R8G8B8;
+		_engineSettings._format = A8R8G8B8;
 		break;
 	default:
-		_engineSettings._format = ::Math::R8G8B8A8;
+		_engineSettings._format = R8G8B8A8;
 		break;
 	}
 
@@ -58,41 +58,46 @@ Result OutputImp::SetOutputSurface(void* pData, int nDataSize, int xResolution, 
 }
 Result OutputImp::Refresh()
 {
+	//try to retrieve camera and scene
 	Scene scene;
+	Camera camera;
 	if(IObjectContainer* icamera = Base::_parent)
 	{
-		IObjectContainer* iscene;
 		try
 		{
-			iscene = dynamic_cast<CameraImp*>(icamera)->GetScene();
+			IObjectContainer* iscene = dynamic_cast<CameraImp*>(icamera)->GetScene();
+			if(iscene != nullptr)
+			{
+				camera.reset(dynamic_cast<ICamera*>(icamera));
+				scene.reset(dynamic_cast<IScene*>(iscene));
+			}
 		}
 		catch(const std::bad_cast&)
 		{
-			iscene= nullptr;
-		}
-		if(iscene)
-		{
-			try
-			{
-				scene = Scene(dynamic_cast<IScene*>(iscene));
-			}
-			catch(const std::bad_cast&)
-			{
-				scene.reset();
-			}
+			camera.reset();
+			scene.reset();
 		}
 	}
 
-	if(scene.get() == nullptr)
+	if(scene.get() == nullptr || camera.get() == nullptr)
 		return Result::Failed;
 
 	_engineSettings._scene = scene;
+	_engineSettings._camera = camera;
+	_engineSettings._output.reset(this);
 
 	if(_engineSettings._pDataOut == nullptr)
 		_raytraceEngine.reset();
 	else
 	{
-		_raytraceEngine = CreateDummyEngine(_engineSettings);
+		if( _engine == RenderingEngineDummy)
+			_raytraceEngine = CreateDummyEngine(_engineSettings);
+		else if(_engine == RenderingEngineSimple)
+			_raytraceEngine = CreateSimpleEngine(_engineSettings);
+		else if(_engine == RenderingEngineFast)
+			_raytraceEngine = CreateFastEngine(_engineSettings);
+		else
+			_raytraceEngine = CreateDummyEngine(_engineSettings);
 
 		_raytraceEngine->Begin();
 	}

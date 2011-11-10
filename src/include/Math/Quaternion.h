@@ -14,32 +14,26 @@
 namespace Math {
 
 	
-template<class _T> struct Quaternion
+template<class _T> struct Quaternion : private Eigen::Quaternion<_T>
 {
+private:
+	typedef Eigen::Quaternion<_T> Base;
+	typedef Math::Quaternion<_T> ThisType;
 public:
 
-	union
-	{
-		_T c[4];
-		struct
-		{
-			_T r,i,j,k;
-		};
-	};
-
-	Quaternion(const _T& _1,const _T& _2,const _T& _3,const _T& _4) :
+	ThisType(const _T& _1,const _T& _2,const _T& _3,const _T& _4) :
 		r(_1),i(_2),j(_3),k(_4)
 	{
 	}
 
-	Quaternion(const _T& _1, const Vector3<_T>& _2) :
-		r(_1),i(_2.x),j(_2.y),k(_2.z)
+	ThisType(const _T& _1, const ::Math::Vector3<_T>& _2) :
+		r(_1),i(_2.x()),j(_2.y()),k(_2.z())
 	{
 	}
 
 	//assignment
 
-	Quaternion& operator = (const Quaternion<_T>& _1)
+	ThisType& operator = (const Quaternion<_T>& _1)
 	{
 		r = _1.r;
 		i = _1.i;

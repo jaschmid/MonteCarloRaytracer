@@ -14,6 +14,7 @@
 #include <limits>
 #include <cmath>
 #include <boost/math/special_functions/fpclassify.hpp>
+#include <Eigen/Eigen>
 
 namespace Math {
 
@@ -73,8 +74,73 @@ template<> static f64 sqrt<f64>(const f64& v)
 template<class _T = f32> struct Vector2;
 template<class _T = f32> struct Vector3;
 template<class _T = f32> struct Vector4;
+template<class _T = f32> struct Matrix2;
+template<class _T = f32> struct Matrix3;
 template<class _T = f32> struct Matrix4;
 template<class _T = f32> struct Quaternion;
+template<class _T = f32> struct Complex;
+
+// Generic types
+
+template<class _T,int _Dimensions> struct GVector
+{
+	typedef void type;
+};
+template<class _T,int _Dimensions> struct GMatrix
+{
+	typedef void type;
+};
+template<class _T,int _Dimensions> struct GRotation
+{
+	typedef void type;
+};
+
+// specific Generic types
+
+template<class _T> struct GVector<_T,1>
+{
+	typedef _T type;
+};
+template<class _T> struct GVector<_T,2>
+{
+	typedef Vector2<_T> type;
+};
+template<class _T> struct GVector<_T,3>
+{
+	typedef Vector3<_T> type;
+};
+template<class _T> struct GVector<_T,4>
+{
+	typedef Vector4<_T> type;
+};
+template<class _T> struct GMatrix<_T,1>
+{
+	typedef _T type;
+};
+template<class _T> struct GMatrix<_T,2>
+{
+	typedef Matrix2<_T> type;
+};
+template<class _T> struct GMatrix<_T,3>
+{
+	typedef Matrix3<_T> type;
+};
+template<class _T> struct GMatrix<_T,4>
+{
+	typedef Matrix4<_T> type;
+};
+template<class _T> struct GRotation<_T,1>
+{
+	typedef _T type;
+};
+template<class _T> struct GRotation<_T,2>
+{
+	typedef Complex<_T> type;
+};
+template<class _T> struct GRotation<_T,3>
+{
+	typedef Quaternion<_T> type;
+};
 
 }
 

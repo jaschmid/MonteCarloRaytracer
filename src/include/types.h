@@ -9,7 +9,7 @@
 
 #include "preproc.h"
 
-namespace Math {
+namespace Raytrace {
 
 typedef float f32;
 typedef double f64;

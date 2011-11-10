@@ -20,14 +20,9 @@
 
 #include <boost/intrusive_ptr.hpp>
 #include <string>
+#include "types.h"
 
-#include <Math/MathTypes.h>
-#include <Math/Binary.h>
-#include <Math/Vector2.h>
-#include <Math/Vector3.h>
-#include <Math/Vector4.h>
-#include <Math/Quaternion.h>
-#include <Math/Matrix4.h>
+#include <Eigen/Eigen>
 
 namespace Raytrace {
 
@@ -62,13 +57,28 @@ namespace Raytrace {
 	typedef ObjectPointer<IXmlParser>	XmlParser;
 	typedef std::string					String;
 
-	typedef Math::f32					Real;
-	typedef Math::Vector2<Real>			Vector2;
-	typedef Math::Vector3<Real>			Vector3;
-	typedef Math::Vector4<Real>			Vector4;
-	typedef Math::Matrix4<Real>			Matrix4;
-	typedef Math::Quaternion<Real>		Quaternion;
-	
+	typedef f32								Real;
+	typedef Eigen::Matrix<Real,2,1>			Vector2;
+	typedef Eigen::Matrix<i32,2,1>			Vector2i;
+	typedef Eigen::Matrix<u32,2,1>			Vector2u;
+	typedef Eigen::Matrix<f32,2,1>			Vector2f;
+	typedef Eigen::Matrix<f64,2,1>			Vector2d;
+	typedef Eigen::Matrix<Real,3,1>			Vector3;
+	typedef Eigen::Matrix<i32,3,1>			Vector3i;
+	typedef Eigen::Matrix<u32,3,1>			Vector3u;
+	typedef Eigen::Matrix<f32,3,1>			Vector3f;
+	typedef Eigen::Matrix<f64,3,1>			Vector3d;
+	typedef Eigen::Matrix<Real,4,1>			Vector4;
+	typedef Eigen::Matrix<i32,4,1>			Vector4i;
+	typedef Eigen::Matrix<u32,4,1>			Vector4u;
+	typedef Eigen::Matrix<f32,4,1>			Vector4f;
+	typedef Eigen::Matrix<f64,4,1>			Vector4d;
+	typedef Eigen::Matrix<Real,4,4>			Matrix4;
+	typedef Eigen::Quaternion<Real>			Quaternion;
+	/*
+	typedef Math::Ray<Real,3>			Ray;
+	typedef Math::Triangle<Real,3>		Triangle;
+	*/
 
 	class IBase
 	{

@@ -160,7 +160,7 @@ bool XmlParserImp::readTriMeshNode(const TiXmlElement& e,TriMesh& trimesh)
 			child->Attribute("x",&location[0]);
 			child->Attribute("y",&location[1]);
 			child->Attribute("z",&location[2]);
-			trimesh->PushVertex(Vector3(location[0],location[1],location[2]));
+			trimesh->PushVertex(Vector3((f32)location[0],(f32)location[1],(f32)location[2]));
 		}
 		else if(child->ValueStr() == "set_material")
 		{
@@ -174,10 +174,10 @@ bool XmlParserImp::readTriMeshNode(const TiXmlElement& e,TriMesh& trimesh)
 		else if(child->ValueStr() == "f")
 		{
 			// a face!
-			Math::Vector3<int> vertices;
-			child->Attribute("a",&vertices.x);
-			child->Attribute("b",&vertices.y);
-			child->Attribute("c",&vertices.z);
+			Vector3i vertices;
+			child->Attribute("a",(int*)&vertices.x());
+			child->Attribute("b",(int*)&vertices.y());
+			child->Attribute("c",(int*)&vertices.z());
 			trimesh->PushTriangle(vertices[0],vertices[1],vertices[2],current_material);
 		}
 		child = child->NextSiblingElement();

@@ -16,12 +16,16 @@
 
 namespace Math {
 
-template<class _T> struct Matrix4
+template<class _T> struct Matrix4 : private Eigen::Matrix<_T,4,4>
 {
-	union
-	{
-		_T			v[16];
-	};
+private:
+	typedef Eigen::Matrix<_T,4,4> Base;
+public:
+	static const int										Dimension = 4;
+	typedef _T												T;
+	typedef _T												Scale;
+	typedef Matrix4<_T>										Offset;
+	typedef Matrix4<_T>										ThisType;
 
 	// constructors
 
@@ -66,7 +70,7 @@ template<class _T> struct Matrix4
 
 	static const Matrix4<_T> NaN()
 	{
-		_T nan = Raytrace::NaN<_T>();
+		_T nan = ::Math::NaN<_T>();
 		return Matrix4(
 			Vector4<_T>(nan,nan,nan,nan),
 			Vector4<_T>(nan,nan,nan,nan),
@@ -86,7 +90,7 @@ template<class _T> struct Matrix4
 		return result;
 	}
 
-	static const Matrix4<_T> Translate(const Vector3<_T>& v)
+	static const Matrix4<_T> FromTranslate(const Vector3<_T>& v)
 	{
 		return Matrix4(
 			Vector4<_T>(1.0f,0.0f,0.0f,v.x),
@@ -96,10 +100,10 @@ template<class _T> struct Matrix4
 		);
 	}
 
-	static const Matrix4<_T> LookAt(const Vector3<_T>& eye,const Vector3<_T>& at,const Vector3<_T>& up)
+	static const Matrix4<_T> FromLookAt(const Vector3<_T>& eye,const Vector3<_T>& at,const Vector3<_T>& up)
 	{
-		Vector3<> zaxis = (at - eye).normalize();
-		Vector3<> xaxis = (up % zaxis).normalize();
+		Vector3<> zaxis = (at - eye).normalized();
+		Vector3<> xaxis = (up % zaxis).normalized();
 		Vector3<> yaxis = (zaxis % xaxis);
 		return Matrix4(
 			Vector4<_T>(xaxis,-(xaxis*eye)),
@@ -109,7 +113,7 @@ template<class _T> struct Matrix4
 		);
 	}
 
-	static const Matrix4<_T> Scale(const Vector3<_T>& v)
+	static const Matrix4<_T> FromScale(const Vector3<_T>& v)
 	{
 		return Matrix4(
 			Vector4<_T>(v.x ,0.0f,0.0f,0.0f),
@@ -118,7 +122,7 @@ template<class _T> struct Matrix4
 			Vector4<_T>(0.0f,0.0f,0.0f,1.0f)
 		);
 	}
-	static const Matrix4<_T> AngleRotation(const Vector3<_T>& a,const _T& angle)
+	static const Matrix4<_T> FromAngleRotation(const Vector3<_T>& a,const _T& angle)
 	{
 		_T _cos = cos(angle);
 		_T _1cos = 1.0f - _cos;
@@ -131,7 +135,7 @@ template<class _T> struct Matrix4
 		);
 	}
 
-	static const Matrix4<_T> QuaternionRotation(const Quaternion<_T>& q)
+	static const Matrix4<_T> FromQuaternionRotation(const Quaternion<_T>& q)
 	{
 		_T a2 = q.r*q.r;
 		_T b2 = q.i*q.i;
@@ -221,7 +225,7 @@ template<class _T> struct Matrix4
 
 	bool IsNaN() const
 	{
-		return Raytrace::IsNaN(v[0]);
+		return ::Math::IsNaN(v[0]);
 	}
 
 	operator bool() const
@@ -232,7 +236,7 @@ template<class _T> struct Matrix4
 	// access operators
 	Vector4<_T>& Row(const u32& i)
 	{
-		return *(Vector4<_T>*)&v[i*4];
+		return Vector4<_T>(Base::row(i));
 	}
 	const Vector4<_T>& Row(const u32& i) const
 	{

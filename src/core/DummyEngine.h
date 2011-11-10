@@ -20,8 +20,9 @@
 #define RAYTRACE_DUMMY_ENGINE_GUARD
 
 #include <RaytraceCommon.h>
+#include "Ray.h"
 #include "EngineBase.h"
-
+#include "SceneReader.h"
 
 namespace Raytrace {
 
@@ -41,6 +42,8 @@ template<class _ImageRect> struct DummySampleGenerator
 	DummySampleGenerator(const _ImageRect& rect) : _outputImageRect(rect) {}
 	
 	typedef _ImageRect OutputImageRect;
+	typedef EngineMultiThreaded ThreadingMode;
+	typedef EngineGenerator EngineType;
 
 	OutputImageRect			_outputImageRect;
 };
@@ -52,6 +55,8 @@ struct DummyIntersector
 		typedef DummyIntersectorEngine<_SampleData,_RayData> type;
 	};
 	typedef DummyRayData ExternalData;
+	typedef EngineMultiThreaded ThreadingMode;
+	typedef EngineIntersector EngineType;
 };
 
 struct DummyShader
@@ -61,6 +66,8 @@ struct DummyShader
 		typedef DummyShaderEngine<_SampleData,_RayData> type;
 	};
 	typedef DummySampleData ExternalData;
+	typedef EngineMultiThreaded ThreadingMode;
+	typedef EngineSampler EngineType;
 };
 
 template<class _OutputImageRect,class _SampleData,class _RayData> struct DummySampleGeneratorEngine
@@ -73,23 +80,26 @@ template<class _OutputImageRect,class _SampleData,class _RayData> struct DummySa
 	inline void prepare(int numThreads) {}
 	inline int gatherOutput() 
 	{
-		::Math::Pixel<::Math::A8R8G8B8> c1;
+		Pixel<A8R8G8B8> c1;
 		c1.SetRed(0xff);
 		c1.SetBlue(0x00);
 		c1.SetGreen(0x00);
-		::Math::FillRectangle(_outputImageRect, c1);
+		FillRectangle(_outputImageRect, c1);
 		return 0;
 	}
+	inline void pushGenerate() {};
 	inline int threadEnter(int iThreadId) {return 0;}
 
 	OutputImageRect			_outputImageRect;
+	public:
+		EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };
 template<class _SampleData,class _RayData> struct DummyIntersectorEngine
 {
 	typedef _SampleData SampleData;
 	typedef _RayData RayData;
 
-	inline DummyIntersectorEngine(const DummyIntersector& shader,_SampleData& sampleData,RayData& rayData) {}
+	inline DummyIntersectorEngine(const DummyIntersector& shader,_SampleData& sampleData,RayData& rayData,const SceneReader& scene) {}
 	inline void prepare(int numThreads) {}
 	inline int threadEnter(int iThreadId) {return 0;}
 };
@@ -98,20 +108,41 @@ template<class _SampleData,class _RayData> struct DummyShaderEngine
 	typedef _SampleData SampleData;
 	typedef _RayData RayData;
 
-	inline DummyShaderEngine(const DummyShader& shader,_SampleData& sampleData,RayData& rayData) {}
+	inline DummyShaderEngine(const DummyShader& shader,_SampleData& sampleData,RayData& rayData,const SceneReader& scene) {}
 	inline void prepare(int numThreads) {}
-	inline int threadEnter(int iThreadId) {return 0;}
+	inline void threadEnterSubsample(int iThreadId) {return;}
+	inline void threadEnterShade(int iThreadId) {return;}
 };
 
 struct DummySampleData
 {
-	inline DummySampleData(const DummyShader& shader) {}
+	inline DummySampleData() {}
+	inline void preparePushingSamples() {}
 	inline void prepare(int numThreads) {}
+	inline bool emptyStack() const { return true;}
+	inline void pushStack() {}
+	inline void popStack() {}
+	inline void popShaded() {}
+	inline bool hasSamplesToShade() { return false; }
+	inline bool hasSamplesToSubsample() { return false; }
+	inline void completeShading() {}
+	inline void completeSubsampling() {}
+	inline void completePushingSamples() {}
+	inline void prepareShading() {}
+	inline void prepareSubsampling() {}
 };
 
 struct DummyRayData
 {
-	inline DummyRayData(const DummyIntersector& shader) {}
+	inline DummyRayData() {}
+	inline void prepareAllocatingRays() {}
+	inline void completeIntersecting() {}
+	inline void completeAllocatingRays() {}
+	inline void prepareIntersecting() {}
+	inline bool hasRaysToIntersect() { return false; }
+	inline void pushRay(const Ray& dir,int ResultThreadId,int ResultSampleId) {}
+	inline void pushStack() {}
+	inline void popStack() {}
 	inline void prepare(int numThreads) {}
 };
 

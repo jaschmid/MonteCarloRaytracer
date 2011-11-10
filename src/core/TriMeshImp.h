@@ -20,6 +20,7 @@
 
 #include <RaytraceTriMesh.h>
 #include "ObjectImp.h"
+#include "Triangle.h"
 
 namespace Raytrace {
 
@@ -31,6 +32,30 @@ namespace Raytrace {
 		int PushVertex(const Vector3& location);
 		int PushTriangle(int vertex1,int vertex2,int vertex3,Material material);
 
+		inline int getNumTriangles() const
+		{
+			return _triangleVertices.size();
+		}
+
+		inline void getTriangle(int i,Triangle& t,int& mat) const
+		{
+			const Vector3i triIndices = _triangleVertices[i];
+			t.setPoint(0, _vertexLocations[triIndices[0]]);
+			t.setPoint(1, _vertexLocations[triIndices[1]]);
+			t.setPoint(2, _vertexLocations[triIndices[2]]);
+			mat = _triangleMaterials[i];
+		}
+
+		inline int getNumMaterials() const
+		{
+			return _materials.size();
+		}
+
+		inline Material getMaterial(int i) const
+		{
+			return _materials[i];
+		}
+
 	private:
 
 		TriMeshImp(const String& name);
@@ -39,7 +64,7 @@ namespace Raytrace {
 
 		std::vector<Material>			_materials;
 		std::vector<Vector3>			_vertexLocations;
-		std::vector<Math::Vector3<int>> _triangleVertices;
+		std::vector<Vector3i>			_triangleVertices;
 		std::vector<int>				_triangleMaterials;
 	};
 
