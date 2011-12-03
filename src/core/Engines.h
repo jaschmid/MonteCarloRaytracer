@@ -36,17 +36,64 @@
 #include "IIntegrator.h"
 #include "IIntersector.h"
 #include "ISampler.h"
+#include "SampleData.h"
 
 namespace Raytrace {
 
 namespace assign = boost::assign;
+		
+struct GeneratedSample
+{
+	up		_index;
+
+	inline GeneratedSample() : _currentSampleIndex(0)
+	{
+	}
+	inline GeneratedSample(up index) : _currentSampleIndex(0),_index(index)
+	{
+	}
+	inline up operator()() const
+	{
+		return _currentSampleIndex;
+	}
+
+	inline void operator++()
+	{
+		++_currentSampleIndex;
+	}
+
+	inline GeneratedSample(const GeneratedSample& other) :_index(other._index),_currentSampleIndex(other._currentSampleIndex)
+	{
+	}
+
+private:
+
+	up		_currentSampleIndex;
+};
+
+struct CompletedSample
+{
+	inline CompletedSample()
+	{
+	}
+
+	inline CompletedSample(const CompletedSample& other) :_index(other._index),_result(other._result)
+	{
+	}
 	
+	inline CompletedSample(const GeneratedSample& other,const Vector3& result) :_index(other._index),_result(result)
+	{
+	}
+
+	up		_index;
+	Vector3	_result;
+};
 
 // ray Data
 template<class _RayType,class _PrimitiveType,int _RaysPerBlock> struct SimpleRayData;
 
 // sample Data
-template<int _NumSamplesPerBlock,int _ControlledSampleDimensions,int _UncontrolledSampleDimensions,class _SampleOutput,class _Scalar> struct SimpleSampleData;
+template<int _NumSamplesPerBlock,class _SampleValueType,class _SampleIndexType,class _SampleInput,class _SampleOutput> struct SimpleSampleData;
 
 // loaded Scene Reader
 template<class _PrimitiveType> struct LoadedSceneReader;
@@ -60,6 +107,9 @@ typename boost::shared_ptr<ISampler<_SampleData,_SceneReader>> CreateMCSampler()
 
 template<class _SampleData,class _RayData,class _SceneReader> 
 typename boost::shared_ptr<IIntegrator<_SampleData,_RayData,_SceneReader>> CreateWhittedIntegrator();
+
+template<class _SampleData,class _RayData,class _SceneReader> 
+typename boost::shared_ptr<IIntegrator<_SampleData,_RayData,_SceneReader>> CreateBackwardIntegrator();
 
 // intersectors
 
@@ -121,7 +171,8 @@ template<class _RayData,class _SampleData,class _SceneReader> struct EngineOptio
 	static const std::map<String,IntegratorConstructor>& getIntegrators()
 	{
 		static const std::map<String,IntegratorConstructor> intersectors = assign::map_list_of
-			( String("Whitted Integrator"), IntegratorConstructor( &CreateWhittedIntegrator<SampleData,RayData,SceneReader> ) );
+			( String("Whitted Integrator"), IntegratorConstructor( &CreateWhittedIntegrator<SampleData,RayData,SceneReader> ) )
+			( String("Backward Integrator"), IntegratorConstructor( &CreateBackwardIntegrator<SampleData,RayData,SceneReader> ) );
 		return intersectors;
 	}
 
@@ -168,7 +219,7 @@ typedef Triangle<> SimpleTriangle;
 
 typedef EngineOptions<
 	SimpleRayData<SimpleRay,SimpleTriangle,64>,
-	SimpleSampleData<64,2,64,Eigen::Matrix<f32,3,1>,f32>,
+	SimpleSampleData<64,Real,up,GeneratedSample,CompletedSample>,
 	LoadedSceneReader<SimpleTriangle>
 > DefaultEngine;
 

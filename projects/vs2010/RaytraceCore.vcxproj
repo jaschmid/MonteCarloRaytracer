@@ -30,14 +30,15 @@
     <ClInclude Include="..\..\src\core\AABB.h" />
     <ClInclude Include="..\..\src\Core\Aligned.h" />
     <ClInclude Include="..\..\src\Core\ArrayAdapter.h" />
+    <ClInclude Include="..\..\src\Core\BackwardIntegrator.h" />
     <ClInclude Include="..\..\src\core\BaseImp.h" />
     <ClInclude Include="..\..\src\core\BVH.h" />
     <ClInclude Include="..\..\src\Core\BVHConstructor.h" />
     <ClInclude Include="..\..\src\core\BVHIntersector.h" />
     <ClInclude Include="..\..\src\core\CameraImp.h" />
-    <ClInclude Include="..\..\src\core\ConcurrentStorage.h" />
-    <ClInclude Include="..\..\src\core\DummyEngine.h" />
+    <ClInclude Include="..\..\src\Core\chunk_vector.h" />
     <ClInclude Include="..\..\src\Core\Engines.h" />
+    <ClInclude Include="..\..\src\Core\FisheyeCamera.h" />
     <ClInclude Include="..\..\src\core\headers.h" />
     <ClInclude Include="..\..\src\Core\IEngine.h" />
     <ClInclude Include="..\..\src\Core\IIntersector.h" />
@@ -63,6 +64,7 @@
     <ClInclude Include="..\..\src\core\SceneReader.h" />
     <ClInclude Include="..\..\src\core\SimpleIntersector.h" />
     <ClInclude Include="..\..\src\Core\SIMDType.h" />
+    <ClInclude Include="..\..\src\Core\SplitUseWorkQueue.h" />
     <ClInclude Include="..\..\src\Core\static_vector.h" />
     <ClInclude Include="..\..\src\Core\TemplateOptions.h" />
     <ClInclude Include="..\..\src\core\Triangle.h" />
@@ -95,6 +97,7 @@
     <ClInclude Include="..\..\src\TinyXml\tinyxml.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\src\Core\BackwardIntegrator.cpp" />
     <ClCompile Include="..\..\src\Core\BVHIntersector.cpp" />
     <ClCompile Include="..\..\src\core\CameraImp.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Use</PrecompiledHeader>

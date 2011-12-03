@@ -22,7 +22,6 @@
 #include <RaytraceCommon.h>
 #include <queue>
 #include "Ray.h"
-#include "ConcurrentStorage.h"
 #include "MathHelper.h"
 #include "RayData.h"
 #include "BVH.h"
@@ -72,7 +71,6 @@ template<class _RayData,class _SceneReader,int _SimdWidth,int _NodeArraySize,int
 
 	typedef typename BasePrimitiveType::adapt<PrimitiveUserOptions>::type UserPrimitiveType;
 
-	typedef typename BaseRayType::adapt<RayOptions>::type		RayType;
 	typedef typename BasePrimitiveType::adapt<PrimitiveOptions>::type	PrimitiveType;
 	typedef AABBAccel<SimdWidth>	VolumeType;
 	
@@ -279,23 +277,19 @@ template<class _RayData,class _SceneReader,int _SimdWidth,int _NodeArraySize,int
 	{
 	}
 	
-	template<class _RayType> void doIntersections(int threadId)
+	template<class _RayType> inline void doIntersections(int threadId)
 	{
-		auto it = _rayData->begin<_RayType>(threadId);
-		auto end = _rayData->end<_RayType>();
-		while(it != end)
-		{
-			processRay<_RayType>(it);
-			++it;
-		}
+		typename RayData::Element<_RayType> element;
+		while(_rayData->popRay<_RayType>(threadId,element))
+			processRay<_RayType>(element);
 	}
 
-	template<class _RayType> void processRay(typename RayData::iterator<_RayType>& it);
+	template<class _RayType> void processRay(const typename RayData::Element<_RayType>& it);
 
 
-	template<> void processRay<AnyHitRay>(typename RayData::iterator<AnyHitRay>& iterator)
+	template<> void processRay<AnyHitRay>(const typename RayData::Element<AnyHitRay>& element)
 	{
-		const BaseRayType&									rayBase = iterator->ray;
+		const BaseRayType&									rayBase = element.ray;
 		static_vector<typename BVHType::nodeIterator,128 >	stack;
 		std::array<BaseRayType,SimdWidth>					rayArray;
 		bool												found = false;
@@ -342,14 +336,14 @@ template<class _RayData,class _SceneReader,int _SimdWidth,int _NodeArraySize,int
 		}
 
 		if(found)
-			(*iterator->resultOut) = 1;
+			(*element.resultOut) = 1;
 		else
-			(*iterator->resultOut) = 0;
+			(*element.resultOut) = 0;
 	}
 	
-	template<> void processRay<FirstHitRay>(typename RayData::iterator<FirstHitRay>& iterator)
+	template<> void processRay<FirstHitRay>(const typename RayData::Element<FirstHitRay>& element)
 	{
-		const BaseRayType& rayBase = iterator->ray;
+		const BaseRayType& rayBase = element.ray;
 		ActiveStack<128> stack;
 
 		std::array<BaseRayType,SimdWidth> rayArray;
@@ -416,17 +410,17 @@ template<class _RayData,class _SceneReader,int _SimdWidth,int _NodeArraySize,int
 		
 		if(triId != 0)
 		{
-			if(iterator->absoluteIntersectionLocation)(*iterator->absoluteIntersectionLocation) = rayBase.origin()+ rayBase.direction()*t;
-			if(iterator->rayRelativeIntersectionLocation)(*iterator->rayRelativeIntersectionLocation) = t;
-			if(iterator->primitiveRelativeIntersectionLocation)(*iterator->primitiveRelativeIntersectionLocation) = bary;
-			if(iterator->primitiveIdentifier)(*iterator->primitiveIdentifier) = triId - 1;
+			if(element.absoluteIntersectionLocation)(*element.absoluteIntersectionLocation) = rayBase.origin()+ rayBase.direction()*t;
+			if(element.rayRelativeIntersectionLocation)(*element.rayRelativeIntersectionLocation) = t;
+			if(element.primitiveRelativeIntersectionLocation)(*element.primitiveRelativeIntersectionLocation) = bary;
+			if(element.primitiveIdentifier)(*element.primitiveIdentifier) = triId - 1;
 		}
 		else
 		{
-			if(iterator->absoluteIntersectionLocation)(*iterator->absoluteIntersectionLocation) = Vector3(0.0f,0.0f,0.0f);
-			if(iterator->rayRelativeIntersectionLocation)(*iterator->rayRelativeIntersectionLocation) = -1.0f;
-			if(iterator->primitiveRelativeIntersectionLocation)(*iterator->primitiveRelativeIntersectionLocation) = Vector2(0.0f,0.0f);
-			if(iterator->primitiveIdentifier)(*iterator->primitiveIdentifier) = -1;
+			if(element.absoluteIntersectionLocation)(*element.absoluteIntersectionLocation) = Vector3(0.0f,0.0f,0.0f);
+			if(element.rayRelativeIntersectionLocation)(*element.rayRelativeIntersectionLocation) = -1.0f;
+			if(element.primitiveRelativeIntersectionLocation)(*element.primitiveRelativeIntersectionLocation) = Vector2(0.0f,0.0f);
+			if(element.primitiveIdentifier)(*element.primitiveIdentifier) = -1;
 		}
 	}
 

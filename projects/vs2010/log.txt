@@ -1,2 +1,2 @@
-17722 Nodes, 3.47 full out of 4
-43836 Leaves, 3.82 full out of 4
+221 Nodes, 3.36 full out of 4
+525 Leaves, 3.89 full out of 4

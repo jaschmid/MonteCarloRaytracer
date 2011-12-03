@@ -26,6 +26,9 @@
 #include "PoissonDiscSampler.h"
 #include "ISampler.h"
 #include "SceneReader.h"
+#include <boost/random/mersenne_twister.hpp>
+#include <boost/random/uniform_01.hpp>
+
 
 namespace Raytrace {
 
@@ -99,8 +102,8 @@ template<class _SampleData,class _SceneReader> struct MCSampler : public ISample
 
 		_sampleData= &sampleData;
 
-		_sampleData->resizeSampleBuffer(_maxGenerateSamples);
-		
+		_sampleData->setSampleGenerator(this);
+				
 		_threadData.resize(numThreads);
 
 		_numDesiredSamples = _finalImage.size()*_sampler.count();
@@ -126,72 +129,75 @@ template<class _SampleData,class _SceneReader> struct MCSampler : public ISample
 			it->_numCompleted = 0;
 		}
 	}
+	
+	typename SampleData::SampleValue2DType getSampleLocation2D(const typename SampleData::SampleInput& sample,typename SampleData::SampleIndexType random_index,size_t threadId)
+	{
+		if(random_index == SampleData::SampleIndex2DImageXY)
+		{
+			size_t multisampleIndex = (size_t)(sample._index  / (up)_finalImage.size());
+			size_t imageIndex = (size_t)(sample._index  % (up)_finalImage.size());
+			//SampleIdType sampleIndex = (SampleIdType)(i - _numCompletedSamples);
+				
+			Vector2i currentPixel((u32)(imageIndex % _imageSize.x()), (u32)(imageIndex / _imageSize.x()));
+			Vector2 current ( (float)(currentPixel.x()) * (float)_pixelSize.x(), (float)(currentPixel.y()) * (float)_pixelSize.y());
+			current+=_pixelSize*.5f;
+
+			Vector2 jitter = _sampler(multisampleIndex);
+
+			Vector2 location = current + (jitter.array() * _pixelSize.array()).matrix() - _pixelSize*.5f;
+			assert(location.x() >= 0.0f && location.x() <= 1.0f);
+			assert(location.y() >= 0.0f && location.y() <= 1.0f);
+
+			return location;
+		}
+		else
+		{
+			return Vector2(	_threadData[threadId]._randomUniformDistribution(_threadData[threadId]._randomGenerator),
+					_threadData[threadId]._randomUniformDistribution(_threadData[threadId]._randomGenerator));
+		}
+	}
+
+	typename SampleData::SampleValueType getSampleLocation(const typename SampleData::SampleInput& sample,typename SampleData::SampleIndexType random_index,size_t threadId)
+	{
+		return _threadData[threadId]._randomUniformDistribution(_threadData[threadId]._randomGenerator);
+	}
+
 	void GenerateMT(size_t threadId) 
 	{
 		const Vector2u size(_imageSize);
 
 		//read completed
+		typename SampleData::SampleOutput completed;
+
+		while(_sampleData->popCompletedSample(threadId,completed))
 		{
-			auto it = _sampleData->beginCompleted(threadId);
-			auto end = _sampleData->endCompleted(threadId);
+			size_t imageIndex = completed._index % _finalImage.size();
 
-			while(it != end)
-			{
-				Vector2i currentPixel((int)(it->getX()* (f32)size.x()), (int)(it->getY()* (f32)size.y()));
-				size_t imageIndex = currentPixel.y() * size.x() + currentPixel.x();
-
-				_finalImage[imageIndex].pushData(Vector3(it->getResult()));
-				_threadData[threadId]._numCompleted++;
-
-				it.deactivateSample();
-			}
+			_finalImage[imageIndex].pushData(completed._result);
+			_threadData[threadId]._numCompleted++;
 		}
 
-		_generateBarrier->wait();
-
 		//write new
+
+		while(true)
 		{
-			auto it = _sampleData->beginInactive(threadId);
-			auto end = _sampleData->endInactive(threadId);
+			const up block = InterlockedIncrement(_nextGenerateBlock) - 1;
 
-			while(it != end)
+			const up firstSample = std::max<up>(_numGeneratedSamples,block*SampleBlockSize);
+			const up endSample = std::min<up>(_numGeneratedSamples+_nextGenerateSamples,(block+1)*SampleBlockSize);
+
+			if(firstSample >= endSample)
+				break;
+				
+
+			typename SampleData::SampleInput generated;
+			const up numSamples = endSample-firstSample;
+
+			for(up i = firstSample; i < endSample; ++i)
 			{
-				const up block = InterlockedIncrement(_nextGenerateBlock) - 1;
-
-				const up firstSample = std::max<up>(_numGeneratedSamples,block*SampleBlockSize);
-				const up endSample = std::min<up>(_numGeneratedSamples+_nextGenerateSamples,(block+1)*SampleBlockSize);
-
-				if(firstSample >= endSample)
-					break;
-				
-				const up numSamples = endSample-firstSample;
-
-				for(up i = firstSample; i < endSample && it != end; ++i)
-				{
-					size_t multisampleIndex = (size_t)(i  / (up)_finalImage.size());
-					size_t imageIndex = (size_t)(i  % (up)_finalImage.size());
-					//SampleIdType sampleIndex = (SampleIdType)(i - _numCompletedSamples);
-				
-					Vector2i currentPixel((u32)(imageIndex % size.x()), (u32)(imageIndex / size.x()));
-					Vector2 current ( (float)(currentPixel.x()) * (float)_pixelSize.x(), (float)(currentPixel.y()) * (float)_pixelSize.y());
-					current+=_pixelSize*.5f;
-
-					Vector2 jitter = _sampler(multisampleIndex);
-
-					Vector2 location = current + (jitter.array() * _pixelSize.array()).matrix() - _pixelSize*.5f;
-					assert(location.x() >= 0.0f && location.x() <= 1.0f);
-					assert(location.y() >= 0.0f && location.y() <= 1.0f);
-
-					it->setX(location.x());
-					it->setY(location.y());
-
-					float x = location.x(),y = location.y(),z = (float)multisampleIndex / (float)_sampler.count();
-
-					it->setResult( Vector3( x,y,z) );
-
-					it.activateSample();
-					_threadData[threadId]._numGenerated++;
-				}
+				generated._index = i;
+				_sampleData->pushGeneratedSample(threadId,generated);
+				_threadData[threadId]._numGenerated++;
 			}
 		}
 	}
@@ -273,18 +279,7 @@ template<class _SampleData,class _SceneReader> struct MCSampler : public ISample
 	}
 	void GetImage(IMAGE_FORMAT format,size_t xRes,size_t yRes,void* pDataOut) const 
 	{
-		assert(xRes == _imageSize.x());
-		assert(yRes == _imageSize.y());
-
-		switch(format)
-		{
-		case A8R8G8B8:
-			Gather(ImageRect<A8R8G8B8>(pDataOut,Vector2u((u32)xRes,(u32)yRes),(u32)xRes*sizeof(Pixel<A8R8G8B8>)));
-			return;
-		case RGBA_FLOAT32:
-			Gather(ImageRect<RGBA_FLOAT32>(pDataOut,Vector2u((u32)xRes,(u32)yRes),(u32)xRes*sizeof(Pixel<RGBA_FLOAT32>)));
-			return;
-		}
+		GatherPreview(format,xRes,yRes,pDataOut);
 	}
 
 	struct FinalImageElement
@@ -324,8 +319,10 @@ template<class _SampleData,class _SceneReader> struct MCSampler : public ISample
 
 	struct ThreadData
 	{
-		size_t _numGenerated;
-		size_t _numCompleted;
+		boost::random::uniform_01<Real,Real>	_randomUniformDistribution;
+		boost::random::mt11213b		_randomGenerator;  
+		size_t						_numGenerated;
+		size_t						_numCompleted;
 	};
 
 	std::auto_ptr<boost::barrier>	_generateBarrier;

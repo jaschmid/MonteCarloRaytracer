@@ -120,7 +120,7 @@ namespace Raytrace {
 			{
 			}
 
-			inline nodeIterator() : _encoded(BVH::INVALID_ELEMENT) {}
+			inline nodeIterator() {}
 
 			inline nodeIterator& operator = (const nodeIterator& other)
 			{

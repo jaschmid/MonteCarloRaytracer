@@ -2,6 +2,7 @@
 #include "OutputImp.h"
 #include "CameraImp.h"
 #include "SceneReader.h"
+#include "SampleData.h"
 
 namespace Raytrace {
 RObjectType IOutput::ObjectType = ObjectType::Output;

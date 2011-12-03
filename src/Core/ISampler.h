@@ -23,7 +23,19 @@
 
 namespace Raytrace
 {
-	template<class _SampleData,class _SceneReader> struct ISampler
+	template<class _SampleData> struct ISampleGenerator
+	{
+		virtual typename _SampleData::SampleValue2DType getSampleLocation2D(const typename _SampleData::SampleInput& sample,typename _SampleData::SampleIndexType random_index,size_t threadId) 
+		{
+			return typename _SampleData::SampleValue2DType();
+		}
+		virtual typename _SampleData::SampleValueType getSampleLocation(const typename _SampleData::SampleInput& sample,typename _SampleData::SampleIndexType random_index,size_t threadId) 
+		{
+			return typename _SampleData::SampleValueType();
+		}
+	};
+
+	template<class _SampleData,class _SceneReader> struct ISampler : public ISampleGenerator<_SampleData>
 	{
 		virtual void InitializePrepareST(size_t numThreads,const _SceneReader& scene,_SampleData& sampleData) {}
 		virtual void InitializeMT(size_t threadId) {}
@@ -36,7 +48,7 @@ namespace Raytrace
 		virtual Result GatherPreview(IMAGE_FORMAT format,size_t xRes,size_t yRes,void* pDataOut) const {return Result::NotImplemented;}
 
 		virtual void GetImage(IMAGE_FORMAT format,size_t xRes,size_t yRes,void* pDataOut) const {}
-
+		
 		virtual ~ISampler() {}
 	};
 }

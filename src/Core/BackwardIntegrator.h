@@ -1,6 +1,6 @@
 /********************************************************/
-// FILE: WhittedIntegrator.h
-// DESCRIPTION: Raytracer Whitted Integrator
+// FILE: BackwardIntegrator.h
+// DESCRIPTION: Raytracer Backward Integrator
 // AUTHOR: Jan Schmid (jaschmid@eml.cc)    
 /********************************************************/
 // This work is licensed under the Creative Commons 
@@ -16,8 +16,8 @@
 #pragma once
 #endif
 
-#ifndef RAYTRACE_WHITTED_INTEGRATOR_GUARD
-#define RAYTRACE_WHITTED_INTEGRATOR_GUARD
+#ifndef RAYTRACE_BACKWARD_INTEGRATOR_GUARD
+#define RAYTRACE_BACKWARD_INTEGRATOR_GUARD
 
 #include <RaytraceCommon.h>
 #include "EngineBase.h"
@@ -31,7 +31,6 @@
 
 namespace Raytrace {
 	
-
 struct Light
 {
 	Light(const Vector3& l,const Vector3& c) : _location(l), _color(c) {}
@@ -47,7 +46,7 @@ static const std::array<Light,3> Lights = {
 
 static const Real Epsilon = 0.001f;
 
-template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlock> struct WhittedIntegrator : public IIntegrator<_SampleData,_RayData,_SceneReader>
+template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlock> struct BackwardIntegrator : public IIntegrator<_SampleData,_RayData,_SceneReader>
 {
 	typedef _SampleData SampleData;
 	typedef _RayData RayData;
@@ -62,7 +61,6 @@ template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlo
 	typedef typename RayData::PrimitiveUserData					PrimitiveIdentifier;
 
 	static const size_t ChunkSize = 8*1024;
-	
 
 	static const size_t NumPathsPerBlock = _NumPathsPerBlock;
 
@@ -127,7 +125,7 @@ template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlo
 
 
 	
-	inline WhittedIntegrator() : _sampleData(nullptr),_rayData(nullptr),_writePathArray(0),_readPathArray(1)
+	inline BackwardIntegrator() : _sampleData(nullptr),_rayData(nullptr),_writePathArray(0),_readPathArray(1)
 	{
 	}
 	

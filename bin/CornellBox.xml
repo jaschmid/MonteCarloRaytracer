@@ -82,16 +82,16 @@
 </material>
 
 <material name="Glass-4033368">
-	<IOR fval="1.8"/>
+	<IOR fval="1.1"/>
 	<color r="0.95" g="0.95" b="0.95" a="1"/>
-	<diffuse_reflect fval=".2"/>
+	<diffuse_reflect fval="0"/>
 	<emit fval="0"/>
 	<fresnel_effect bval="false"/>
 	<mirror_color r="1" g="1" b="1" a="1"/>
-	<specular_reflect fval=".8"/>
+	<specular_reflect fval=".2"/>
 	<translucency fval="0"/>
 	<transmit_filter fval="1"/>
-	<transparency fval="0"/>
+	<transparency fval=".8"/>
 	<type sval="shinydiffusemat"/>
 </material>
 
