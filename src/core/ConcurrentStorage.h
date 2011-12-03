@@ -25,6 +25,7 @@
 #include <deque>
 #include <array>
 #include <vector>
+#include <bitset>
 #include <ppl.h>
 #include <concurrent_vector.h>
 
@@ -33,15 +34,44 @@ namespace Raytrace {
 
 // storage specifically for sample and ray data
 // assumes the same block will never be read and written at the same time
+namespace detail
+{
+	template<class _Element,int _Size> struct DefaultElementContainer : public std::array<_Element,_Size>
+	{
+		typedef _Element& reference;
+		typedef const _Element& const_reference;
+	};
 
-template<class _Element,int _BlockSize> class ConcurrentStorage
+	template<int _Size> struct DefaultElementContainer<bool,_Size> : public std::bitset<_Size>
+	{
+		typedef typename std::bitset<_Size>::reference reference;
+		typedef typename bool const_reference;
+	};
+}
+
+
+template<class _Element,int _Size> struct DefaultElementContainer
+{
+	typedef detail::DefaultElementContainer<_Element,_Size> type;
+};
+
+template<class _Element,int _BlockSize,class _IdType = u32,class _BlockData = typename DefaultElementContainer<_Element,_BlockSize>::type> class ConcurrentStorage
 {
 public:
+
+	typedef _IdType IdType;
+	typedef  _BlockData BlockDataContainer;
+
+	typedef typename BlockDataContainer::reference reference;
+	typedef typename BlockDataContainer::const_reference const_reference;
+
+	static const IdType INVALID_ID = (IdType) -1;
+	static const IdType BlockSize = (IdType) _BlockSize;
 
 	class MultiAccessIterator
 	{
 	public:
-		MultiAccessIterator() : _storage(nullptr), _nextBlock(-1),_threadData(0)
+		MultiAccessIterator() : _storage(nullptr), _nextBlock(INVALID_ID),_threadData(0)
 		{
 		}
 
@@ -54,12 +84,12 @@ public:
 			}
 		}
 
-		MultiAccessIterator(ConcurrentStorage& storage,int firstBlock,int endElement) : _storage(&storage), _nextBlock(firstBlock),_endBlock((endElement-1)/_BlockSize+1),_threadData(storage._threadData.size()),_endElement(endElement)
+		MultiAccessIterator(ConcurrentStorage& storage,IdType firstBlock,IdType endElement) : _storage(&storage), _nextBlock(firstBlock),_endBlock(endElement?((endElement-1)/_BlockSize+1):0),_threadData(storage._threadData.size()),_endElement(endElement)
 		{
 			for(auto it = _threadData.begin(); it != _threadData.end(); ++it)
 			{
-				it->_currentBlock = -1;
-				it->_nextElement = -1;
+				it->_currentBlock = INVALID_ID;
+				it->_nextElement = INVALID_ID;
 			}
 		}
 
@@ -82,16 +112,26 @@ public:
 		{
 		}
 
-		inline int getNextElement(int nThreadId)
+		inline IdType getNextElement(IdType nThreadId)
 		{
 			int num = 1;
 			return getNextElements(nThreadId,num);
 		}
+		
+		inline typename std::add_pointer<typename std::remove_reference<typename BlockDataContainer::reference>::type>::type getNextElementPointer(IdType nThreadId)
+		{
+			IdType num = 1;
+			IdType index = getNextElements(nThreadId,num);
+			if(index >= _storage->endElementId())
+				return nullptr;
+			else
+				return &_storage->getElement(index);
+		}
 
-		inline int getNextElements(int nThreadId, int& numElements)
+		inline IdType getNextElements(size_t nThreadId, IdType& numElements)
 		{
 			ThreadData& data = _threadData[nThreadId];
-			if(data._currentBlock == -1 || data._nextElement >= _storage->_allocatedBlocks[data._currentBlock]._numUsed)
+			if(data._currentBlock == INVALID_ID || data._nextElement >= _storage->_allocatedBlocks[data._currentBlock]._numUsed)
 			{
 				if(_nextBlock >= _endBlock)
 				{
@@ -99,7 +139,7 @@ public:
 					return _endElement;
 				}
 				data._currentBlock = InterlockedIncrement(_nextBlock) - 1;
-				data._nextElement = -1;
+				data._nextElement = INVALID_ID;
 				if(data._currentBlock >= _endBlock)
 				{
 					numElements = 0;
@@ -109,18 +149,18 @@ public:
 
 			Block& block = _storage->_allocatedBlocks[data._currentBlock];
 
-			int element;
+			IdType element;
 
-			if(data._nextElement == -1)
+			if(data._nextElement == INVALID_ID)
 			{
 				element = data._currentBlock*_BlockSize;
-				numElements = std::min<int>(block._numUsed,numElements);
+				numElements = std::min<IdType>(block._numUsed,numElements);
 				data._nextElement = numElements;
 			}
 			else
 			{
 				element = data._currentBlock*_BlockSize + data._nextElement;
-				numElements = std::min<int>(block._numUsed - data._nextElement,numElements);
+				numElements = std::min<IdType>(block._numUsed - data._nextElement,numElements);
 				data._nextElement += numElements;
 			}
 
@@ -134,13 +174,13 @@ public:
 		
 		struct ThreadData
 		{
-			int _currentBlock;
-			int _nextElement;
+			IdType _currentBlock;
+			IdType _nextElement;
 		};
 
-		int						_endBlock;
-		int						_endElement;
-		volatile i32			_nextBlock;
+		IdType						_endBlock;
+		IdType						_endElement;
+		volatile IdType				_nextBlock;
 
 		ConcurrentStorage* _storage;
 
@@ -149,46 +189,61 @@ public:
 
 	inline ConcurrentStorage() : _numAllocatedBlocks(0),_numUsedBlocks(0),_maxBlocks(0x7fffffff),_maxElement(0x7fffffff)
 	{
+		static_assert( _BlockSize > 0 , "Block Size needs to be larger than zero.");
 	}
 
 	inline ~ConcurrentStorage()
 	{
 	}
 
-	inline MultiAccessIterator begin(int firstElement = 0,int endElement = -1)
+	inline MultiAccessIterator begin(IdType firstElement = 0,IdType endElement = INVALID_ID)
 	{
-		if(firstElement < 0)
+		if(firstElement == INVALID_ID)
 			firstElement = 0;
 
-		int firstBlock = firstElement/_BlockSize;
+		IdType firstBlock = firstElement/_BlockSize;
 
-		if(endElement < firstElement)
+		if(endElement < firstElement || endElement == INVALID_ID)
 			endElement  = endElementId();
 
 		return MultiAccessIterator(*this, firstBlock, endElement);
 	}
-
-	inline void setMaxElement(int maxElement = 0x7fffffff)
+	/*
+	inline void setMaxElement(IdType maxElement = 0x7fffffff)
 	{
 		_maxElement = maxElement;
 	}
-
-	inline void popElements(int idNewEnd)
+	
+	inline void popElements(IdType idNewEnd)
 	{
-		_numUsedBlocks = (idNewEnd-1)/_BlockSize + 1;
 		if(idNewEnd > 0)
 		{
-			int lastBlock = _numUsedBlocks - 1;
-			int lastElement = (idNewEnd-1)%_BlockSize;
+			_numUsedBlocks = (idNewEnd-1)/_BlockSize + 1;
+
+			IdType lastBlock = _numUsedBlocks - 1;
+			IdType lastElement = (idNewEnd-1)%_BlockSize;
 
 			_allocatedBlocks[lastBlock]._numUsed = lastElement + 1;
 		}
+		else
+			_numUsedBlocks = 0;
 
 		for(auto it = _threadData.begin(); it != _threadData.end(); ++it)
-			it->_currentWriteBlock = -1;
+			it->_currentWriteBlock = INVALID_ID;
+	}*/
+
+	inline void clear()
+	{
+		_numUsedBlocks = 0;
+
+		for(auto it = _threadData.begin(); it != _threadData.end(); ++it)
+		{
+			it->_currentWriteBlock = INVALID_ID;
+			it->_numElements = 0;
+		}
 	}
 
-	inline int endElementId() const
+	inline IdType endElementId() const
 	{
 		if(_numUsedBlocks == 0)
 			return 0;
@@ -199,39 +254,52 @@ public:
 	inline void finishWritingBlock()
 	{
 		for(auto it = _threadData.begin(); it != _threadData.end(); ++it)
-			it->_currentWriteBlock = -1;
+			it->_currentWriteBlock = INVALID_ID;
 	}
 
-	inline _Element& getElement(int id)
+	inline typename BlockDataContainer::reference getElement(IdType id)
 	{
 		return _allocatedBlocks[id/_BlockSize]._data[id%_BlockSize];
 	}
-	inline const _Element& getElement(int id) const
+	inline typename BlockDataContainer::const_reference getElement(IdType id) const
 	{
 		return _allocatedBlocks[id/_BlockSize]._data[id%_BlockSize];
 	}
 
-	inline int pushElements(int threadId,int count)
+	inline IdType pushElements(size_t threadId,IdType count)
 	{
 		if(count > _BlockSize || count <= 0)
-			return -1;
-		int currentBlock = _threadData[threadId]._currentWriteBlock;
+			return INVALID_ID;
+		IdType currentBlock = _threadData[threadId]._currentWriteBlock;
 		if(currentBlock == -1 || count > (_BlockSize - _allocatedBlocks[currentBlock]._numUsed) )
 			currentBlock = _threadData[threadId]._currentWriteBlock = getNewBlock();
 		if(currentBlock == -1)
-			return -1;
+			return INVALID_ID;
 
-		int element = _allocatedBlocks[currentBlock]._numUsed + currentBlock*_BlockSize;
+		IdType element = _allocatedBlocks[currentBlock]._numUsed + currentBlock*_BlockSize;
 		_allocatedBlocks[currentBlock]._numUsed += count;
+
+		_threadData[threadId]._numElements += count;
 
 		return element;
 	}
 
-	inline void prepare(int numThreads)
+	inline void prepare(size_t numThreads)
 	{
 		_threadData.resize(numThreads);
 		for(auto it = _threadData.begin(); it != _threadData.end(); ++it)
-			it->_currentWriteBlock = -1;
+		{
+			it->_currentWriteBlock = INVALID_ID;
+			it->_numElements = 0;
+		}
+	}
+
+	inline size_t  size() const
+	{
+		size_t total = 0;
+		for(auto it = _threadData.begin(); it != _threadData.end(); ++it)
+			total += it->_numElements;
+		return total;
 	}
 
 private:
@@ -240,13 +308,13 @@ private:
 
 	friend class MultiAccessIterator;
 
-	int getNewBlock()
+	IdType getNewBlock()
 	{
 		while(true)
 		{
-			i32 newBlock = _numUsedBlocks;
+			IdType newBlock = _numUsedBlocks;
 			if(newBlock >= _maxBlocks || newBlock >= (_maxElement-1)/_BlockSize+1)
-				return -1;
+				return INVALID_ID;
 			if(_numAllocatedBlocks <= newBlock)
 			{
 				boost::mutex::scoped_lock l(_allocationMutex);
@@ -264,22 +332,23 @@ private:
 
 	struct ThreadData
 	{
-		int _currentWriteBlock; // -1 for none
+		IdType _currentWriteBlock; // -1 for none
+		size_t _numElements;
 	};
 
 	struct Block
 	{
-		std::array<_Element,_BlockSize>		_data;
-		int									_numUsed;
+		BlockDataContainer					_data;
+		IdType								_numUsed;
 	};
 	
-	volatile i32				_numUsedBlocks;
-	const int							_maxBlocks;
-	int									_maxElement;
+	volatile IdType						_numUsedBlocks;
+	const IdType						_maxBlocks;
+	IdType								_maxElement;
 
-	int									_numAllocatedBlocks;
+	IdType								_numAllocatedBlocks;
 	boost::mutex						_allocationMutex;
-	Concurrency::concurrent_vector<Block,Eigen::aligned_allocator<Block>>		_allocatedBlocks;
+	Concurrency::concurrent_vector<Block,AlignedAllocator<Block>>		_allocatedBlocks;
 
 	std::vector<ThreadData>				_threadData;
 };

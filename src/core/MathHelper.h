@@ -21,9 +21,6 @@
 
 #include <boost/shared_ptr.hpp>
 #include <RaytraceCommon.h>
-#include "Triangle.h"
-#include "Ray.h"
-#include "AABB.h"
 
 namespace Raytrace {
 	
@@ -40,109 +37,81 @@ namespace Raytrace {
 		return result;
 	}
 
-	// from http://www.sci.utah.edu/~wald/PhD/wald_phd.pdf
-	// http://www.openprocessing.org/visuals/?visualID=14228#
 
-	__declspec(align(16)) struct TriAccel
+	namespace detail
 	{
-		inline TriAccel() {}
-		inline TriAccel(const Triangle& tri,int user1 = 0,int user2 = 0)
-		{// calc normal
-			const Vector3& A = tri.point(0);
-			Vector3 B = tri.point(2) - tri.point(0);
-			Vector3 C = tri.point(1) - tri.point(0);
-			Vector3  N = C.cross(B);
- 
-			if ( abs(N.x()) > abs(N.y()))
-			  if (abs(N.x()) > abs(N.z()))
-				_k = 0; // X
-			  else
-				_k=2; // Z
-			else
-			  if (abs(N.y()) > abs(N.z()))
-				_k = 1; // Y
-			  else
-				_k=2; // Z
-			int u = (_k+1) %3;
-			int v = (_k+2) % 3;
-			/*
- 
-			if ( N[_k] == 0.0)
-			{
-			  println("Degenerate Tri " + A + B + C + N);
-			}*/
-			//assert( abs(N[_k])>0.00000f);
- 
-			_n_u = N[u]/N[_k]; //!< == normal.u / normal.k
-			_n_v = N[v]/N[_k]; //!< == normal.v / normal.k
-			_n_d = A[u]*_n_u + A[v]*_n_v + A[_k]; //!< constant of plane equation
- 
-			// do B
-			float bdenom = (B[u]*C[v]-B[v]*C[u]);
-			//assert( abs(bdenom)>0.00000f);
-			bdenom = 1.f/bdenom;
- 
-			_b_nu = -B[v]*bdenom;
-			_b_nv = B[u]*bdenom;
-			_b_d = (B[v]*A[u]-B[u]*A[v])*bdenom;
- 
-			// do C
-			_c_nu = C[v]*bdenom;
-			_c_nv = -C[u]*bdenom;
-			_c_d = (-C[v]*A[u]+C[u]*A[v])*bdenom;
-			
-			_user1 = user1;
-			_user2 = user2;
-		}
-
-		// first 16 byte half cache line
-		// plane:
-		Real _n_u; //!< == normal.u / normal.k
-		Real _n_v; //!< == normal.v / normal.k
-		Real _n_d; //!< constant of plane equation
-		int _k; // projection dimension
-		// second 16 byte half cache line
-		// line equation for line ac
-		Real _b_nu;
-		Real _b_nv;
-		Real _b_d;
-		int _user1; // pad to next cache line
-		// third 16 byte half cache line
-		// line equation for line ab
-		Real _c_nu;
-		Real _c_nv;
-		Real _c_d;
-		int _user2; // pad to 48 bytes for cache alignment purposes
-	};
-	
-	__declspec(align(16)) struct RayAccel
-	{
-		RayAccel(const Ray& ray) 
+		template<bool _bA,bool _bB,class _A,class _B> struct _findCommonType
 		{
-			_origin = ray.origin();
-			_direction = ray.direction();
-			_length = ray.length();
-			_invDirection = Vector3( 1.0f / direction().x(), 1.0f / direction().y(), 1.0f / direction().z());
-		}
-
-		const Vector3& origin() const { return _origin; }
-		const Vector3& direction() const { return _direction; }
-		const Vector3& invDirection() const { return _invDirection; }
-		const Real& length() const { return _length; }
-		int sign(int i) const { return _invDirection[i] < .0f; }
-
-		Vector3		_origin;
-		Real		_length;
-		Vector3		_direction;
-		Real		_padding;
-		Vector3		_invDirection;
-		Real		_padding2;
+			typedef void type;
+		};
+		
+		template<class _A,class _B> struct _findCommonType<false,true,_A,_B>
+		{
+			typedef _A type;
+		};
+		
+		template<class _A,class _B> struct _findCommonType<true,false,_A,_B>
+		{
+			typedef _B type;
+		};
+		
+		template<class _A,class _B> struct _findCommonType<true,true,_A,_B>
+		{
+			typedef _A type;
+		};
 	};
 
+	template<class _A,class _B> struct findCommonType
+	{
+		typedef typename detail::_findCommonType<std::is_convertible<_A,_B>::value,std::is_convertible<_B,_A>::value,_A,_B>::type type;
+	};
+
+	template<class _C> inline _C Zero()
+	{
+		return _C::Zero();
+	}
+	template<> inline u32 Zero<u32>()
+	{
+		return 0;
+	}
+	template<> inline i32 Zero<i32>()
+	{
+		return 0;
+	}
+	template<> inline f32 Zero<f32>()
+	{
+		return 0.0f;
+	}
+	template<> inline f64 Zero<f64>()
+	{
+		return 0.0;
+	}
+
+	template<class _C> struct BooleanOf
+	{
+		typedef typename _C::Boolean type;
+	};
+	template<> struct BooleanOf<f32>
+	{
+		typedef bool type;
+	};
+	template<> struct BooleanOf<f64>
+	{
+		typedef bool type;
+	};
+	template<> struct BooleanOf<u32>
+	{
+		typedef bool type;
+	};
+	template<> struct BooleanOf<i32>
+	{
+		typedef bool type;
+	};
+	/*
 	inline bool Intersect(const RayAccel& ray,const TriAccel& acc,Real& t,Vector2& barycentric)
 	{
 		__declspec(align(64)) static const unsigned int modulo[] = {0,1,2,0,1};
-		static const Real EPSILON = 0.000001f;
+		static const Real EPSILON = 0.00001f;
 
 		const int ku = modulo[acc._k+1];
 		const int kv = modulo[acc._k+2];
@@ -154,7 +123,7 @@ namespace Raytrace {
 		- acc._n_u * ray.origin()[ku] - acc._n_v * ray.origin()[kv]) * nd;
 		// check for valid distance.
 
-		if (!(( ray.length() < 0.0f || ray.length() > f ) && f > EPSILON )) return false;
+		if ( t < f || f < EPSILON ) return false;
 
 		// compute hitpoint positions on uv plane
 		const Real hu = (ray.origin()[ku] + f * ray.direction()[ku]);
@@ -172,8 +141,246 @@ namespace Raytrace {
 		barycentric.x() = lambda;
 		barycentric.y() = mue;
 		return true;
+	}*/
+	/*
+	template<int _Width> inline int Intersect(
+		const RayAccelBase<_Width>& ray,
+		const TriAccelBase<_Width>& tri,
+		SimdType<float,_Width>& t,
+		typename Vector2v<_Width>::type& barycentric,
+		SimdType<int,_Width>& triId)
+	{
+		typedef typename Vector2v<_Width>::type Vector2_T;
+		typedef typename Vector3v<_Width>::type Vector3_T;
+		typedef SimdType<float,_Width> Scalar_T;
+		typedef typename SimdType<float,_Width>::Boolean Boolean;
+
+		static const Scalar_T infinity(std::numeric_limits<float>::infinity());
+
+		//calculate ray plane intersection
+		Scalar_T det = ray.direction().dot( tri._n_v );
+
+		Scalar_T inv_det = det.Reciprocal();
+
+		//Boolean valid = (det > Scalar_T::Zero());
+
+		Scalar_T t_ = -tri._n_d - (ray.origin().dot( tri._n_v) );
+		Vector3_T P_ = det*ray.origin() + t_ * ray.direction();
+
+		// calculate impact values
+		t_ *= inv_det;
+
+		Boolean valid = (t_ >= Scalar_T::Epsilon()) & (t_ < t);
+
+		Scalar_T u_ = (P_.dot( tri._u_v ) + det * tri._u_d)*inv_det;
+
+		valid &= (u_ >= Scalar_T::Zero());
+
+		Scalar_T v_ = (P_.dot( tri._v_v ) + det * tri._v_d)*inv_det;
+
+		valid &= ( (u_ + v_) <= Scalar_T::One() ) & ( v_ >= Scalar_T::Zero() );
+
+		// check if we found any results
+		if(valid.mask())
+		{
+			t.ConditionalAssign(valid,t_,t);
+			t = t.Min();
+			Scalar_T::Boolean resultMask = (t == t_);
+			triId = tri._user & resultMask;
+			barycentric.x() = u_ & resultMask;
+			barycentric.y() =v_ & resultMask;
+		}
+
+		return valid.mask();
+	}*/
+	/*
+	template<class _RayClass,class _TriangleClass> inline void IntersectTriangleCore(
+		const _RayClass& ray,
+		const _TriangleClass& tri,
+		typename _RayClass::Scalar_T& t_,
+		Eigen::Matrix<typename _RayClass::Scalar_T,2,1>& uv,
+		typename _RayClass::Scalar_T::Boolean& valid)
+	{
+		typedef Eigen::Matrix<typename _RayClass::Scalar_T,2,1> Vector2_T;
+		typedef Eigen::Matrix<typename _RayClass::Scalar_T,3,1> Vector3_T;
+		typedef _RayClass::Scalar_T Scalar_T;
+
+		//calculate ray plane intersection
+		Scalar_T inv_det = ray.direction().dot( tri._n_v ).ReciprocalHighPrecision();
+		t_ = -tri._n_d - (ray.origin().dot( tri._n_v) );
+		t_ *= inv_det;
+		Vector3_T P_ = ray.origin() + t_ * ray.direction();
+
+		// calculate impact values
+		uv.x() = P_.dot( tri._u_v ) + tri._u_d;
+		uv.y() = P_.dot( tri._v_v ) + tri._v_d;
+
+		// check if we found any results
+
+		//Boolean d_valid = (det > Scalar_T::Zero());
+		valid = ( (uv.x() + uv.y()) <= Scalar_T::One() ) & ( uv.x() >= Scalar_T::Zero() ) & ( uv.y() >= Scalar_T::Zero() );
+	}
+	/*
+	template<int _Width> inline int Intersect(
+		const RayAccelBase<_Width>& ray,
+		const TriAccelBase<_Width>& tri,
+		SimdType<float,_Width>& t,
+		typename Vector2v<_Width>::type& barycentric,
+		SimdType<int,_Width>& triId)
+	{
+		typedef typename Vector2v<_Width>::type Vector2_T;
+		typedef SimdType<float,_Width> Scalar_T;
+		typedef typename SimdType<float,_Width>::Boolean Boolean;
+
+		Vector2_T uv;
+		Scalar_T t_;
+
+		Boolean valid;
+		IntersectTriangleCore(ray,tri,t_,uv,valid);
+
+		valid &= (t_ >= Scalar_T::Epsilon()) & (t_ < t);
+
+		// update result
+		if(valid.mask())
+		{
+			t.ConditionalAssign(valid,t_,t);
+			t = t.Min();
+			Scalar_T::Boolean resultMask = (t == t_);
+			triId = tri._user & resultMask;
+			barycentric.x() = uv.x() & resultMask;
+			barycentric.y() = uv.y() & resultMask;
+		}
+
+		return valid.mask();
 	}
 
+	template<int _Width> inline int Intersect(
+		const RayAccelBase<_Width>& ray,
+		const TriAccelBase<_Width>& tri,
+		const SimdType<float,_Width>& t)
+	{
+		typedef typename Vector2v<_Width>::type Vector2_T;
+		typedef SimdType<float,_Width> Scalar_T;
+		typedef typename SimdType<float,_Width>::Boolean Boolean;
+
+		Vector2_T uv;
+		Scalar_T t_;
+		
+		Boolean valid;
+		IntersectTriangleCore(ray,tri,t_,uv,valid);
+
+		valid &= (t_ >= Scalar_T::Epsilon()) & (t_ < t);
+		
+		return valid.mask();
+	}
+
+	template<int _Width,int _ArraySize> inline void IntersectTriangleArrayCore(
+		const RayAccelBase<_Width>& ray,
+		const std::array<TriAccelBase<_Width>,_ArraySize>& tri,
+		std::array<SimdType<float,_Width>,_ArraySize>& t_,
+		std::array<typename Vector2v<_Width>::type,_ArraySize>& uv,
+		std::array<typename SimdType<float,_Width>::Boolean,_ArraySize>& valid)
+	{
+		typedef std::array<typename Vector2v<_Width>::type,_ArraySize> Vector2_T;
+		typedef std::array<typename Vector3v<_Width>::type,_ArraySize> Vector3_T;
+		typedef std::array<SimdType<float,_Width>,_ArraySize> Scalar_T;
+
+		//calculate ray plane intersection
+		Scalar_T inv_det;
+		Vector3_T P_;
+
+		for(int i = 0; i < _ArraySize; ++i)
+			inv_det[i] = ray.direction().dot( tri[i]._n_v );
+		
+		for(int i = 0; i < _ArraySize; ++i)
+			inv_det[i] = inv_det[i].ReciprocalHighPrecision();
+
+		for(int i = 0; i < _ArraySize; ++i)
+			t_[i] = -tri[i]._n_d - (ray.origin().dot( tri[i]._n_v) );
+
+		for(int i = 0; i < _ArraySize; ++i)
+			t_[i] *= inv_det[i];
+		
+		for(int i = 0; i < _ArraySize; ++i)
+			P_[i] = ray.origin() + t_ [i]* ray.direction();
+
+		// calculate impact values
+		for(int i = 0; i < _ArraySize; ++i)
+			uv[i].x() = P_[i].dot( tri[i]._u_v ) + tri[i]._u_d;
+
+		for(int i = 0; i < _ArraySize; ++i)
+			uv[i].y() = P_[i].dot( tri[i]._v_v ) + tri[i]._v_d;
+
+		// check if we found any results
+
+		//Boolean d_valid = (det > Scalar_T::Zero());
+		for(int i = 0; i < _ArraySize; ++i)
+			valid[i] = ( (uv[i].x() + uv[i].y()) <= SimdType<float,_Width>::One() ) & ( uv[i].x() >= SimdType<float,_Width>::Zero() ) & ( uv[i].y() >= SimdType<float,_Width>::Zero() );
+	}
+
+	template<int _Width,int _ArraySize> inline bool IntersectArray(
+		const RayAccelBase<_Width>& ray,
+		const std::array<TriAccelBase<_Width>,_ArraySize>& tri,
+		SimdType<float,_Width>& t,
+		typename Vector2v<_Width>::type& barycentric,
+		SimdType<int,_Width>& triId)
+	{
+		typedef typename Vector2v<_Width>::type Vector2_T;
+		typedef SimdType<float,_Width> Scalar_T;
+		typedef typename SimdType<float,_Width>::Boolean Boolean;
+
+		std::array<Vector2_T,_ArraySize> uv;
+		std::array<Scalar_T,_ArraySize> t_;
+		std::array<Boolean,_ArraySize> valid;
+
+		IntersectTriangleArrayCore(ray,tri,t_,uv,valid);
+		
+		bool result = false;
+		
+		for(int i = 0; i < _ArraySize; ++i)
+		{
+			valid[i] &= (t_[i] >= Scalar_T::Epsilon()) & (t_[i] < t[i]);
+
+			if(valid[i].mask())
+			{
+				t.ConditionalAssign(valid[i],t_[i],t);
+				t = t.Min();
+				Scalar_T::Boolean resultMask = (t == t_[i]);
+				triId = tri[i]._user & resultMask;
+				barycentric.x() = uv[i].x() & resultMask;
+				barycentric.y() = uv[i].y() & resultMask;
+				result = true;
+			}
+		}
+
+		return result;
+	}
+
+	template<int _Width,int _ArraySize> inline bool IntersectArray(
+		const RayAccelBase<_Width>& ray,
+		const std::array<TriAccelBase<_Width>,_ArraySize>& tri,
+		const SimdType<float,_Width>& t)
+	{
+		typedef typename Vector2v<_Width>::type Vector2_T;
+		typedef SimdType<float,_Width> Scalar_T;
+		typedef typename SimdType<float,_Width>::Boolean Boolean;
+		
+		std::array<Vector2_T,_ArraySize> uv;
+		std::array<Scalar_T,_ArraySize> t_;
+		std::array<Boolean,_ArraySize> valid;
+
+		IntersectTriangleArrayCore(ray,tri,t_,uv,valid);
+		
+		for(int i = 0; i < _ArraySize; ++i)
+		{
+			valid[i] &= (t_[i] >= Scalar_T::Epsilon()) & (t_[i] < t[i]);
+
+			if(valid[i].mask())
+				return true;
+		}
+		return false;
+	}
+	
 	inline bool Intersect(const Ray& ray,const Triangle& triangle,Real& t,Vector2& barycentric)
 	{
 		static const Real EPSILON = 0.000001f;
@@ -207,36 +414,265 @@ namespace Raytrace {
 		else
 			return false;
 	}
-	
-	inline bool Intersect(const RayAccel& ray,const AABB& aabb, Real& t) 
-	{  
-		Real tmin, tmax, tymin, tymax, tzmin, tzmax;
+	/*
+	template<int _Width,int _Array> inline typename int IntersectArray(const RayAccelBase<_Width>& ray,const std::array<AABBAccelBase<_Width>,_Array>& aabb, std::array<SimdType<float,_Width>,_Array>& t) 
+	{
+		typedef typename Vector2v<_Width>::type Vector2_T;
+		typedef typename Vector3v<_Width>::type Vector3_T;
+		typedef SimdType<float,_Width> Scalar_T;
+		typedef typename SimdType<float,_Width>::Boolean Boolean;
+		
+		// X
 
-		tmin = (aabb._data[ray.sign(0)].x() - ray.origin().x()) * ray.invDirection().x();
-		tmax = (aabb._data[1-ray.sign(0)].x() - ray.origin().x()) * ray.invDirection().x();
-		tymin = (aabb._data[ray.sign(1)].y() - ray.origin().y()) * ray.invDirection().y();
-		tymax = (aabb._data[1-ray.sign(1)].y() - ray.origin().y()) * ray.invDirection().y();
+		std::array<Scalar_T,_Array> tXmax,tXmin,tYmax,tYmin,tZmax,tZmin;
+		std::array<Boolean,_Array> valid;
 
-		if ( (tmin > tymax) || (tymin > tmax) ) 
-			return false;
-		if (tymin > tmin)
-			tmin = tymin;
-		if (tymax < tmax)
-			tmax = tymax;
+		for(int i = 0; i < _Array; ++i)
+			tXmax[i] = (aabb[i].max().x() - ray.origin().x())* ray.invDirection().x();
+		
+		for(int i = 0; i < _Array; ++i)
+			tXmin[i] = (aabb[i].min().x() - ray.origin().x())* ray.invDirection().x();
 
-		tzmin = (aabb._data[ray.sign(2)].z() - ray.origin().z()) * ray.invDirection().z();
-		tzmax = (aabb._data[1-ray.sign(2)].z() - ray.origin().z()) * ray.invDirection().z();
+		for(int i = 0; i < _Array; ++i)
+			Scalar_T::ConditionalSwap( ray.sign(0), tXmax[i], tXmin[i] );
+		
+		// Y
+		
+		for(int i = 0; i < _Array; ++i)
+			tYmax[i] = (aabb[i].max().y() - ray.origin().y())* ray.invDirection().y();
+		for(int i = 0; i < _Array; ++i)
+			tYmin[i] = (aabb[i].min().y() - ray.origin().y())* ray.invDirection().y();
 
-		if ( (tmin > tzmax) || (tzmin > tmax) ) 
-			return false;
-		if (tzmin > tmin)
-			tmin = tzmin;
-		if (tzmax < tmax)
-			tmax = tzmax;
+		for(int i = 0; i < _Array; ++i)
+			Scalar_T::ConditionalSwap( ray.sign(1), tYmax[i], tYmin[i] );
+		
+		for(int i = 0; i < _Array; ++i)
+			valid[i] = (tXmin[i] <= tYmax[i]); 
 
-		t = tmin;
-		return ( (ray.length() <= 0.0f || (tmin < ray.length())) && (tmax > .0) );
+		for(int i = 0; i < _Array; ++i)
+			valid[i] &= (tYmin[i] <= tXmax[i]);
+		
+		for(int i = 0; i < _Array; ++i)
+			tXmin[i] = tXmin[i].Max( tYmin[i] );
+
+		for(int i = 0; i < _Array; ++i)
+			tXmax[i] = tXmax[i].Min( tYmax[i] );
+
+		// Z
+		
+		for(int i = 0; i < _Array; ++i)
+			tZmax[i] = (aabb[i].max().z() - ray.origin().z())* ray.invDirection().z();
+		
+		for(int i = 0; i < _Array; ++i)
+			tZmin[i] = (aabb[i].min().z() - ray.origin().z())* ray.invDirection().z();
+		
+		for(int i = 0; i < _Array; ++i)
+			Scalar_T::ConditionalSwap( ray.sign(2), tZmax[i], tZmin[i] );
+		
+		for(int i = 0; i < _Array; ++i)
+			valid[i] &= (tXmin[i] <= tZmax[i]); 
+		for(int i = 0; i < _Array; ++i)
+			valid[i] &= (tZmin[i] <= tXmax[i]);
+		
+		for(int i = 0; i < _Array; ++i)
+			tXmin[i] = tXmin[i].Max( tZmin[i] );
+		for(int i = 0; i < _Array; ++i)
+			tXmax[i] = tXmax[i].Min( tZmax[i] );
+		
+		// check for hit
+		
+		for(int i = 0; i < _Array; ++i)
+			valid[i] &= (tXmin[i] < t[i] );
+
+		for(int i = 0; i < _Array; ++i)
+			valid[i] &= (tXmax[i] > Scalar_T::Zero());
+		
+		for(int i = 0; i < _Array; ++i)
+			t[i].ConditionalAssign(valid[i], tXmin[i].Max(Scalar_T::Zero()), t[i]);
+
+		int result = 0;
+
+		for(int i = 0; i < _Array; ++i)
+			result |= valid[i].mask() << (i * _Width);
+		return result;
 	}
+
+	template<int _Width,int _Array> inline typename int IntersectArray(const RayAccelBase<_Width>& ray,const std::array<AABBAccelBase<_Width>,_Array>& aabb, const SimdType<float,_Width>& t) 
+	{
+		typedef typename Vector2v<_Width>::type Vector2_T;
+		typedef typename Vector3v<_Width>::type Vector3_T;
+		typedef SimdType<float,_Width> Scalar_T;
+		typedef typename SimdType<float,_Width>::Boolean Boolean;
+		
+		// X
+
+		std::array<Scalar_T,_Array> tXmax,tXmin,tYmax,tYmin,tZmax,tZmin;
+		std::array<Boolean,_Array> valid;
+
+		for(int i = 0; i < _Array; ++i)
+			tXmax[i] = (aabb[i].max().x() - ray.origin().x())* ray.invDirection().x();
+		
+		for(int i = 0; i < _Array; ++i)
+			tXmin[i] = (aabb[i].min().x() - ray.origin().x())* ray.invDirection().x();
+
+		for(int i = 0; i < _Array; ++i)
+			Scalar_T::ConditionalSwap( ray.sign(0), tXmax[i], tXmin[i] );
+		
+		// Y
+		
+		for(int i = 0; i < _Array; ++i)
+			tYmax[i] = (aabb[i].max().y() - ray.origin().y())* ray.invDirection().y();
+		for(int i = 0; i < _Array; ++i)
+			tYmin[i] = (aabb[i].min().y() - ray.origin().y())* ray.invDirection().y();
+
+		for(int i = 0; i < _Array; ++i)
+			Scalar_T::ConditionalSwap( ray.sign(1), tYmax[i], tYmin[i] );
+		
+		for(int i = 0; i < _Array; ++i)
+			valid[i] = (tXmin[i] <= tYmax[i]); 
+
+		for(int i = 0; i < _Array; ++i)
+			valid[i] &= (tYmin[i] <= tXmax[i]);
+		
+		for(int i = 0; i < _Array; ++i)
+			tXmin[i] = tXmin[i].Max( tYmin[i] );
+
+		for(int i = 0; i < _Array; ++i)
+			tXmax[i] = tXmax[i].Min( tYmax[i] );
+
+		// Z
+		
+		for(int i = 0; i < _Array; ++i)
+			tZmax[i] = (aabb[i].max().z() - ray.origin().z())* ray.invDirection().z();
+		
+		for(int i = 0; i < _Array; ++i)
+			tZmin[i] = (aabb[i].min().z() - ray.origin().z())* ray.invDirection().z();
+		
+		for(int i = 0; i < _Array; ++i)
+			Scalar_T::ConditionalSwap( ray.sign(2), tZmax[i], tZmin[i] );
+		
+		for(int i = 0; i < _Array; ++i)
+			valid[i] &= (tXmin[i] <= tZmax[i]); 
+		for(int i = 0; i < _Array; ++i)
+			valid[i] &= (tZmin[i] <= tXmax[i]);
+		
+		for(int i = 0; i < _Array; ++i)
+			tXmin[i] = tXmin[i].Max( tZmin[i] );
+		for(int i = 0; i < _Array; ++i)
+			tXmax[i] = tXmax[i].Min( tZmax[i] );
+		
+		// check for hit
+		
+		for(int i = 0; i < _Array; ++i)
+			valid[i] &= (tXmin[i] < t );
+
+		for(int i = 0; i < _Array; ++i)
+			valid[i] &= (tXmax[i] > Scalar_T::Zero());
+
+		int result = 0;
+
+		for(int i = 0; i < _Array; ++i)
+			result |= valid[i].mask() << (i * _Width);
+		return result;
+	}
+
+	template<int _XSign,int _YSign,int _ZSign,int _Width,int _Array> inline typename int IntersectArraySplit(const RayAccelBaseSlope<_Width>& ray,const std::array<AABBAccelBase<_Width>,_Array>& aabb, const SimdType<float,_Width>& t) 
+	{
+		typedef typename Vector2v<_Width>::type Vector2_T;
+		typedef typename Vector3v<_Width>::type Vector3_T;
+		typedef SimdType<float,_Width> Scalar_T;
+		typedef typename SimdType<float,_Width>::Boolean Boolean;
+
+		std::array<Vector3_T,_Array> min,max;
+		std::array<Boolean,_Array> valid;
+		
+		if(_XSign > 0)
+		{
+			for(int i = 0; i < _Array; ++i)
+				valid[i] = ray.origin().x() >= aabb[i].min().x();
+			for(int i = 0; i < _Array; ++i)
+				valid[i] &= ray._s_xy * aabb[i].max().x() >= aabb[i].min().y() + ray._c_xy;
+			for(int i = 0; i < _Array; ++i)
+				valid[i] &= ray._s_xz * aabb[i].max().x() >= aabb[i].min().z() + ray._c_xz;
+		}
+		else if(_XSign == 0)
+		{
+			for(int i = 0; i < _Array; ++i)
+				valid[i] = ray.origin().x() <= aabb[i].max().x() & ray.origin().x() >= aabb[i].min().x();
+		}
+		else
+		{
+			for(int i = 0; i < _Array; ++i)
+				valid[i] = ray.origin().x() <= aabb[i].max().x();
+			for(int i = 0; i < _Array; ++i)
+				valid[i] &= ray._s_xy * aabb[i].min().x() <= aabb[i].max().y() + ray._c_xy;
+			for(int i = 0; i < _Array; ++i)
+				valid[i] &= ray._s_xz * aabb[i].min().x() <= aabb[i].max().z() + ray._c_xz;
+		}
+		
+		if(_YSign > 0)
+		{
+			for(int i = 0; i < _Array; ++i)
+				valid[i] &= ray.origin().y() >= aabb[i].min().y();
+			for(int i = 0; i < _Array; ++i)
+				valid[i] &= ray._s_yx * aabb[i].max().y() >= aabb[i].min().x() + ray._c_yx;
+			for(int i = 0; i < _Array; ++i)
+				valid[i] &= ray._s_yz * aabb[i].max().y() >= aabb[i].min().z() + ray._c_yz;
+		}
+		else if(_YSign == 0)
+			for(int i = 0; i < _Array; ++i)
+				valid[i] = ray.origin().y() <= aabb[i].max().y() & ray.origin().y() >= aabb[i].min().y();
+		else
+		{
+			for(int i = 0; i < _Array; ++i)
+				valid[i] &= ray.origin().y() <= aabb[i].max().y();
+			for(int i = 0; i < _Array; ++i)
+				valid[i] &= ray._s_yx * aabb[i].min().y() <= aabb[i].max().x() + ray._c_yx;
+			for(int i = 0; i < _Array; ++i)
+				valid[i] &= ray._s_yz * aabb[i].min().y() <= aabb[i].max().z() + ray._c_yz;
+		}
+		
+		if(_ZSign > 0)
+		{
+			for(int i = 0; i < _Array; ++i)
+				valid[i] &= ray.origin().z() >= aabb[i].min().z();
+			for(int i = 0; i < _Array; ++i)
+				valid[i] &= ray._s_zx * aabb[i].max().z() >= aabb[i].min().x() + ray._c_zx;
+			for(int i = 0; i < _Array; ++i)
+				valid[i] &= ray._s_zy * aabb[i].max().z() >= aabb[i].min().y() + ray._c_zy;
+		}
+		else if(_ZSign == 0)
+			for(int i = 0; i < _Array; ++i)
+				valid[i] = ray.origin().z() <= aabb[i].max().z() & ray.origin().z() >= aabb[i].min().z();
+		else
+		{
+			for(int i = 0; i < _Array; ++i)
+				valid[i] &= ray.origin().z() <= aabb[i].max().z();
+			for(int i = 0; i < _Array; ++i)
+				valid[i] &= ray._s_zx * aabb[i].min().z() <= aabb[i].max().x() + ray._c_zx;
+			for(int i = 0; i < _Array; ++i)
+				valid[i] &= ray._s_zy * aabb[i].min().z() <= aabb[i].max().y() + ray._c_zy;
+		}
+		
+
+
+
+		int result = 0;
+
+		for(int i = 0; i < _Array; ++i)
+			result |= valid[i].mask() << (i * _Width);
+
+		return result;
+	}
+
+	template<int _Width> inline typename int Intersect(const RayAccelBase<_Width>& ray,const AABBAccelBase<_Width>& aabb, SimdType<float,_Width>& t) 
+	{
+		typedef typename Vector2v<_Width>::type Vector2_T;
+		typedef typename Vector3v<_Width>::type Vector3_T;
+		typedef SimdType<float,_Width> Scalar_T;
+		typedef typename SimdType<float,_Width>::Boolean Boolean;
+		
+	}*/
 }
 
 #endif

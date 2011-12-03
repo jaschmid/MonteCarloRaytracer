@@ -55,20 +55,33 @@ namespace Raytrace {
 		virtual void SetEnabled(const bool& enabled) = 0;
 		virtual bool GetEnabled() const = 0;
 
-		//property AdaptiveRendering/bool
-		virtual void SetAdaptiveRendering(const bool& iterative) = 0;
-		virtual bool GetAdaptiveRendering() const = 0;
-
-		//property MultisampleCount/int
-		virtual void SetMultisampleCount(const int& count) = 0;
-		virtual int GetMultisampleCount() const = 0;
-
 		//property RenderingEngine/String
-		virtual void SetRenderingEngine(const String& renderer) = 0;
-		virtual String GetRenderingEngine() const = 0;
+		virtual void SetEngine(const String& renderer) = 0;
+		virtual String GetEngine() const = 0;
 
-		virtual int GetNumRenderingEngines() const = 0;
-		virtual String GetRenderingEngineName(int i) const = 0;
+		virtual int GetNumEngines() const = 0;
+		virtual String GetEngineName(int i) const = 0;
+
+		//property Integrator/String
+		virtual void SetIntegrator(const String& renderer) = 0;
+		virtual String GetIntegrator() const = 0;
+
+		virtual int GetNumIntegrators() const = 0;
+		virtual String GetIntegratorName(int i) const = 0;
+
+		//property Intersector/String
+		virtual void SetIntersector(const String& renderer) = 0;
+		virtual String GetIntersector() const = 0;
+
+		virtual int GetNumIntersectors() const = 0;
+		virtual String GetIntersectorName(int i) const = 0;
+
+		//property Sampler/String
+		virtual void SetSampler(const String& renderer) = 0;
+		virtual String GetSampler() const = 0;
+
+		virtual int GetNumSamplers() const = 0;
+		virtual String GetSamplerName(int i) const = 0;
 
 		static RObjectType ObjectType;
 	};

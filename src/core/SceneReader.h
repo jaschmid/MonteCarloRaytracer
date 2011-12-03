@@ -24,14 +24,24 @@
 #include "SceneImp.h"
 #include "TriMeshImp.h"
 #include "MaterialImp.h"
+#include "MathHelper.h"
+#include "OutputImp.h"
 
 namespace Raytrace {
 
-	class SceneReader
+	template<class _PrimitiveType> struct LoadedSceneReader
 	{
 	public:
-		SceneReader(const Scene& scene)
+		typedef _PrimitiveType PrimitiveType;
+
+		LoadedSceneReader(const Scene& scene,const Camera& camera,const Output& output,const Vector2u& resolution)
 		{
+			_scene = scene;
+			_camera = camera;
+			_output = output;
+
+			_resolution = resolution;
+
 			Object curr = scene->GetFirstObject(ObjectType::Material);
 			while(curr.get())
 			{
@@ -47,28 +57,49 @@ namespace Raytrace {
 
 				curr = scene->GetNextObject(curr,ObjectType::TriMesh);
 			}
+
+			Vector3 from = camera->GetFrom();
+			Vector3 to = camera->GetTo();
+			Vector3 up = (camera->GetUp() - from).normalized();
+
+			_viewMatrix = FromLookAt(from,to,up);
 		}
 
-		inline int getNumTriangles() const
+		inline int getNumPrimitives() const
 		{
-			if(_triangles.empty())
+			if(_primitives.empty())
 				return 0;
 			else
 			{
-				auto it = _triangles.rbegin();
+				auto it = _primitives.rbegin();
 				return it->first.upper();
 			}
 		}
 		
-		inline void getTriangle(int i,Triangle& t,int& material) const
+		inline void getPrimitive(int i,PrimitiveType& t,int& material) const
 		{
 			int mat;
 
-			auto it = _triangles.find(i);
+			auto it = _primitives.find(i);
 
 			int lower = it->first.lower();
 
 			it->second._triMesh->getTriangle( i - lower, t, mat);
+
+			Vector4 a,b,c;
+
+			a.head<3>() = t.point(0);
+			b.head<3>() = t.point(1);
+			c.head<3>() = t.point(2);
+			a.w() = 1.0f; b.w() = 1.0f; c.w() = 1.0f;
+
+			a = _viewMatrix*a;
+			b = _viewMatrix*b;
+			c = _viewMatrix*c;
+
+			t.setPoint(0, a.head<3>());
+			t.setPoint(1, b.head<3>());
+			t.setPoint(2, c.head<3>());
 			
 			material = it->second._materials[mat];
 
@@ -77,12 +108,17 @@ namespace Raytrace {
 
 		inline int getNumMaterials() const
 		{
-			return _materials.size();
+			return (int)_materials.size();
 		}
 
 		inline Material getMaterial(int i) const
 		{
 			return _materials[i];
+		}
+
+		inline Vector2u getResolution() const
+		{
+			return _resolution;
 		}
 
 	private:
@@ -109,7 +145,7 @@ namespace Raytrace {
 					if(*it == mat)
 					{
 						found = true;
-						container._materials.push_back(it - _materials.begin());
+						container._materials.push_back((int)(it - _materials.begin()));
 						break;
 					}
 				assert(found);
@@ -119,17 +155,17 @@ namespace Raytrace {
 			/*
 			Mesh m;
 			m._triMesh = imp;*/
-			if(_triangles.empty())
+			if(_primitives.empty())
 				begin = 0;
 			else
 			{
-				auto it = _triangles.rbegin();
+				auto it = _primitives.rbegin();
 				begin = it->first.upper();
 			}
 			int num = imp->getNumTriangles();
 			end = begin + num;
 
-			_triangles.insert( std::make_pair(boost::icl::interval<int>::right_open( begin, end),container) );
+			_primitives.insert( std::make_pair(boost::icl::interval<int>::right_open( begin, end),container) );
 		}
 		
 		struct MeshContainer
@@ -146,9 +182,17 @@ namespace Raytrace {
 			}
 		};
 
+		Scene										_scene;
+		Camera										_camera;
+		Output										_output;
+
 		typedef boost::icl::split_interval_map<int,MeshContainer> IntervalMap;
-		IntervalMap									_triangles;
+		Matrix4										_viewMatrix;
+		IntervalMap									_primitives;
 		std::vector<Material>						_materials;
+		Vector2u									_resolution;
+		public:
+		  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 	};
 
 

@@ -37,7 +37,7 @@ namespace Raytrace {
 			return (int)_triangleVertices.size();
 		}
 
-		inline void getTriangle(int i,Triangle& t,int& mat) const
+		inline void getTriangle(int i,Triangle<>& t,int& mat) const
 		{
 			const Vector3i triIndices = _triangleVertices[i];
 			t.setPoint(0, _vertexLocations[triIndices[0]]);

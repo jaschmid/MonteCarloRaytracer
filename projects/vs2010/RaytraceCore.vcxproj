@@ -28,6 +28,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\core\AABB.h" />
+    <ClInclude Include="..\..\src\Core\Aligned.h" />
+    <ClInclude Include="..\..\src\Core\ArrayAdapter.h" />
     <ClInclude Include="..\..\src\core\BaseImp.h" />
     <ClInclude Include="..\..\src\core\BVH.h" />
     <ClInclude Include="..\..\src\Core\BVHConstructor.h" />
@@ -35,12 +37,17 @@
     <ClInclude Include="..\..\src\core\CameraImp.h" />
     <ClInclude Include="..\..\src\core\ConcurrentStorage.h" />
     <ClInclude Include="..\..\src\core\DummyEngine.h" />
-    <ClInclude Include="..\..\src\core\Engines.h" />
+    <ClInclude Include="..\..\src\Core\Engines.h" />
     <ClInclude Include="..\..\src\core\headers.h" />
+    <ClInclude Include="..\..\src\Core\IEngine.h" />
+    <ClInclude Include="..\..\src\Core\IIntersector.h" />
     <ClInclude Include="..\..\src\core\ImageWriter.h" />
     <ClInclude Include="..\..\src\Core\IntersectorBase.h" />
+    <ClInclude Include="..\..\src\Core\ISampler.h" />
+    <ClInclude Include="..\..\src\Core\IIntegrator.h" />
     <ClInclude Include="..\..\src\core\MaterialImp.h" />
     <ClInclude Include="..\..\src\core\MathHelper.h" />
+    <ClInclude Include="..\..\src\Core\MCSampler.h" />
     <ClInclude Include="..\..\src\core\ObjectImp.h" />
     <ClInclude Include="..\..\src\core\OutputImp.h" />
     <ClInclude Include="..\..\src\Core\PoissonDiscSampler.h" />
@@ -54,13 +61,13 @@
     <ClInclude Include="..\..\src\Core\SampleData.h" />
     <ClInclude Include="..\..\src\core\SceneImp.h" />
     <ClInclude Include="..\..\src\core\SceneReader.h" />
-    <ClInclude Include="..\..\src\core\SimpleGenerator.h" />
     <ClInclude Include="..\..\src\core\SimpleIntersector.h" />
     <ClInclude Include="..\..\src\Core\SIMDType.h" />
+    <ClInclude Include="..\..\src\Core\static_vector.h" />
     <ClInclude Include="..\..\src\Core\TemplateOptions.h" />
     <ClInclude Include="..\..\src\core\Triangle.h" />
     <ClInclude Include="..\..\src\core\TriMeshImp.h" />
-    <ClInclude Include="..\..\src\core\WhittedShader.h" />
+    <ClInclude Include="..\..\src\Core\WhittedIntegrator.h" />
     <ClInclude Include="..\..\src\core\XmlParserImp.h" />
     <ClInclude Include="..\..\src\include\Math\Binary.h" />
     <ClInclude Include="..\..\src\include\Math\InterlockedFunctions.h" />
@@ -88,19 +95,14 @@
     <ClInclude Include="..\..\src\TinyXml\tinyxml.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\src\Core\BVHIntersector.cpp" />
     <ClCompile Include="..\..\src\core\CameraImp.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Use</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Use</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='ReleaseIntel|Win32'">Use</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='ReleaseIntel|x64'">Use</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="..\..\src\core\DummyEngine.cpp">
-      <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='ReleaseIntel|x64'">true</RuntimeTypeInfo>
-    </ClCompile>
     <ClCompile Include="..\..\src\core\EngineBase.cpp" />
-    <ClCompile Include="..\..\src\Core\FastEngine.cpp">
-      <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='ReleaseIntel|x64'">true</RuntimeTypeInfo>
-    </ClCompile>
     <ClCompile Include="..\..\src\core\headers.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
@@ -115,14 +117,14 @@
     </ClCompile>
     <ClCompile Include="..\..\src\core\ImageWriter.cpp" />
     <ClCompile Include="..\..\src\core\MaterialImp.cpp" />
+    <ClCompile Include="..\..\src\Core\MCSampler.cpp" />
     <ClCompile Include="..\..\src\core\ObjectTypeDefinitions.cpp" />
     <ClCompile Include="..\..\src\core\OutputImp.cpp" />
     <ClCompile Include="..\..\src\core\ResultDefinitions.cpp" />
     <ClCompile Include="..\..\src\core\SceneImp.cpp" />
+    <ClCompile Include="..\..\src\Core\SimpleIntersector.cpp" />
     <ClCompile Include="..\..\src\core\TriMeshImp.cpp" />
-    <ClCompile Include="..\..\src\core\SimpleEngine.cpp">
-      <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='ReleaseIntel|x64'">true</RuntimeTypeInfo>
-    </ClCompile>
+    <ClCompile Include="..\..\src\Core\WhittedIntegrator.cpp" />
     <ClCompile Include="..\..\src\core\XmlParserImp.cpp" />
     <ClCompile Include="..\..\src\TinyXml\tinystr.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
@@ -281,8 +283,9 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>TIXML_USE_STL;WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>EIGEN_DONT_ALIGN;NOMINMAX;WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>headers.h</PrecompiledHeaderFile>
+      <StructMemberAlignment>Default</StructMemberAlignment>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -294,7 +297,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_WIN64;TIXML_USE_STL;WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>EIGEN_DONT_ALIGN;NOMINMAX;_WIN64;TIXML_USE_STL;WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>headers.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
@@ -309,7 +312,7 @@
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>TIXML_USE_STL;WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>EIGEN_DONT_ALIGN;NOMINMAX;WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>headers.h</PrecompiledHeaderFile>
       <FloatingPointModel>Fast</FloatingPointModel>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
@@ -317,6 +320,7 @@
       <OmitFramePointers>true</OmitFramePointers>
       <FloatingPointExceptions>false</FloatingPointExceptions>
       <OpenMPSupport>true</OpenMPSupport>
+      <StructMemberAlignment>Default</StructMemberAlignment>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -332,7 +336,7 @@
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>_WIN64;TIXML_USE_STL;WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>EIGEN_DONT_ALIGN;NOMINMAX;_WIN64;TIXML_USE_STL;WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>headers.h</PrecompiledHeaderFile>
       <FloatingPointModel>Fast</FloatingPointModel>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
@@ -355,11 +359,11 @@
       <Optimization>MaxSpeedHighLevel</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>TIXML_USE_STL;WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>EIGEN_DONT_ALIGN;NOMINMAX;WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>headers.h</PrecompiledHeaderFile>
       <FloatingPointModel>Precise</FloatingPointModel>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions3</EnableEnhancedInstructionSet>
-      <FavorSizeOrSpeed>Size</FavorSizeOrSpeed>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <OptimizeForWindowsApplication>false</OptimizeForWindowsApplication>
       <EnableMatrixMultiplyLibraryCall>No</EnableMatrixMultiplyLibraryCall>
       <Parallelization>false</Parallelization>
@@ -374,6 +378,7 @@
       <FloatingPointExpressionEvaluation>Source</FloatingPointExpressionEvaluation>
       <OpenMP>GenerateParallelCode</OpenMP>
       <Cpp0xSupport>true</Cpp0xSupport>
+      <StructMemberAlignment>16Bytes</StructMemberAlignment>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -389,7 +394,7 @@
       <Optimization>MaxSpeedHighLevel</Optimization>
       <FunctionLevelLinking>false</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>_WIN64;TIXML_USE_STL;WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>EIGEN_DONT_ALIGN;NOMINMAX;_WIN64;TIXML_USE_STL;WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>headers.h</PrecompiledHeaderFile>
       <FloatingPointModel>Fast2</FloatingPointModel>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions3</EnableEnhancedInstructionSet>

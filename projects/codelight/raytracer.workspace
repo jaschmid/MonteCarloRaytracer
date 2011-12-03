@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeLite_Workspace Name="raytracer" Database="./raytracer.tags">
+  <Project Name="RaytraceCore" Path="RaytraceCore.project" Active="Yes"/>
+  <Project Name="RaytraceGUI" Path="RaytraceGUI.project"/>
+  <BuildMatrix>
+    <WorkspaceConfiguration Name="Debug" Selected="yes">
+      <Project Name="RaytraceCore" ConfigName="Debug"/>
+      <Project Name="RaytraceGUI" ConfigName="Debug"/>
+    </WorkspaceConfiguration>
+    <WorkspaceConfiguration Name="Release" Selected="yes">
+      <Project Name="RaytraceCore" ConfigName="Release"/>
+      <Project Name="RaytraceGUI" ConfigName="Release"/>
+    </WorkspaceConfiguration>
+  </BuildMatrix>
+</CodeLite_Workspace>

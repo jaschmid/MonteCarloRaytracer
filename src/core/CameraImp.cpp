@@ -10,7 +10,7 @@ Camera CreateCamera(const String& name)
 
 CameraImp::CameraImp(const String& name) : 
 	Base(name),
-	_fov(3.14f*60.0f/180.0),
+	_fov(3.14f*60.0f/180.0f),
 	_aspect(3.0f/4.0f),
 	_from(0.0f,0.0f,-1.0f),
 	_to(0.0f,0.0f,0.0f),

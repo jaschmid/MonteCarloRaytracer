@@ -13,12 +13,12 @@
  
 #include <math.h>
 #include <time.h>
+#include <boost/multi_array.hpp>
 #include <iostream>
 #include <fstream>
 #include <vector>
 #include <map>
 #include <math.h>
-#include <boost/multi_array.hpp>
 #include <Eigen/Eigen>
 #include <RaytraceCommon.h>
 

@@ -18,7 +18,7 @@
 	<emit fval="0"/>
 	<fresnel_effect bval="false"/>
 	<mirror_color r="1" g="1" b="1" a="1"/>
-	<specular_reflect fval="0"/>
+	<specular_reflect fval=".1"/>
 	<translucency fval="0"/>
 	<transmit_filter fval="1"/>
 	<transparency fval="0"/>
@@ -32,7 +32,7 @@
 	<emit fval="0"/>
 	<fresnel_effect bval="false"/>
 	<mirror_color r="1" g="1" b="1" a="1"/>
-	<specular_reflect fval="0"/>
+	<specular_reflect fval=".1"/>
 	<translucency fval="0"/>
 	<transmit_filter fval="1"/>
 	<transparency fval="0"/>
@@ -46,7 +46,7 @@
 	<emit fval="0"/>
 	<fresnel_effect bval="false"/>
 	<mirror_color r="1" g="1" b="1" a="1"/>
-	<specular_reflect fval="0"/>
+	<specular_reflect fval=".1"/>
 	<translucency fval="0"/>
 	<transmit_filter fval="1"/>
 	<transparency fval="0"/>
@@ -60,7 +60,7 @@
 	<emit fval="0"/>
 	<fresnel_effect bval="false"/>
 	<mirror_color r="1" g="1" b="1" a="1"/>
-	<specular_reflect fval="0"/>
+	<specular_reflect fval=".1"/>
 	<translucency fval="0"/>
 	<transmit_filter fval="1"/>
 	<transparency fval="0"/>
@@ -71,10 +71,10 @@
 	<IOR fval="1.8"/>
 	<color r="1" g="1" b="1" a="1"/>
 	<diffuse_reflect fval="1"/>
-	<emit fval="0"/>
+	<emit fval=".25"/>
 	<fresnel_effect bval="false"/>
 	<mirror_color r="1" g="1" b="1" a="1"/>
-	<specular_reflect fval="0"/>
+	<specular_reflect fval=".1"/>
 	<translucency fval="0"/>
 	<transmit_filter fval="1"/>
 	<transparency fval="0"/>
@@ -84,11 +84,11 @@
 <material name="Glass-4033368">
 	<IOR fval="1.8"/>
 	<color r="0.95" g="0.95" b="0.95" a="1"/>
-	<diffuse_reflect fval="1"/>
+	<diffuse_reflect fval=".2"/>
 	<emit fval="0"/>
 	<fresnel_effect bval="false"/>
 	<mirror_color r="1" g="1" b="1" a="1"/>
-	<specular_reflect fval="0"/>
+	<specular_reflect fval=".8"/>
 	<translucency fval="0"/>
 	<transmit_filter fval="1"/>
 	<transparency fval="0"/>
@@ -102,7 +102,7 @@
 	<emit fval="0"/>
 	<fresnel_effect bval="false"/>
 	<mirror_color r="1" g="1" b="1" a="1"/>
-	<specular_reflect fval="0"/>
+	<specular_reflect fval=".1"/>
 	<translucency fval="0"/>
 	<transmit_filter fval="1"/>
 	<transparency fval="0"/>

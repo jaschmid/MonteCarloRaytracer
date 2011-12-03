@@ -23,16 +23,12 @@
 #include <array>
 #include <bitset>
 #include <Eigen/Eigen>
+#include "MathHelper.h"
+#include "ArrayAdapter.h"
 
 namespace Raytrace
 {
-	template<class _Base,int _Width> struct SimdType
-	{
-		SimdType()
-		{
-			static_assert(false,"Unsupported Simd Type");
-		}
-	};
+	template<class _Base,int _Width> struct SimdType;
 
 	// non simd passthrough
 	template<class _Base> struct SimdType<_Base,1>
@@ -47,7 +43,9 @@ namespace Raytrace
 
 		inline SimdType() {}
 		inline SimdType(const ThisType& right) : _value(right._value) {}
-		inline SimdType(const std::array<Base,Width>& right) : _value(right[0]) {}
+		
+		template<class _Array,class _Element,int _Size,class _Reader,class _Modifier,class _Adapter> 
+		inline SimdType(const ConstArrayWrapper<_Array,_Element,_Size,_Reader,_Modifier,_Adapter>& right) : _value(right[0]) {}
 		inline SimdType(const Base& right) : _value(right) {}
 	public:
 		
@@ -218,7 +216,6 @@ namespace Raytrace
 		Base _value;
 	};
 	
-	
 	template<> struct SimdType<int,4>
 	{
 	public:
@@ -231,9 +228,17 @@ namespace Raytrace
 		typedef int		 BooleanMask;
 
 		inline SimdType() {}
-		inline SimdType(const Base& base) : _value(_mm_set1_epi32(base)) {}
+		explicit inline SimdType(const Base& base) : _value(_mm_set1_epi32(base)) {}
 		inline SimdType(const ThisType& boolean) : _value(boolean._value) {}
+		
 		inline SimdType(const std::array<Base,Width>& right) : _value(_mm_loadu_si128((const __m128i*)right.data())) {}
+		
+		template<class _Array,class _Element,int _Size,class _Reader,class _Modifier,class _Adapter> 
+		inline SimdType(const ConstArrayWrapper<_Array,_Element,_Size,_Reader,_Modifier,_Adapter>& right)
+		{
+			for(int i = 0; i < Width; ++i)
+				operator[](i) = right[i];
+		}
 		/*
 		inline SimdType(const std::bitset<4>& right)
 		{
@@ -284,12 +289,6 @@ namespace Raytrace
 		inline const Base& operator [](int i) const
 		{
 			return ((const Base*)&_value)[i];
-		}
-
-		inline ThisType& operator =(const Base& right)
-		{
-			_value = _mm_set1_epi32(right);
-			return *this;
 		}
 
 		inline ThisType& operator =(const ThisType& other)
@@ -674,7 +673,7 @@ namespace Raytrace
 
 namespace Eigen {
 
-template<class _Base,int _Width> struct NumTraits<::Raytrace::SimdType<_Base,_Width>>
+template<class _Base,int _Width> struct NumTraits< ::Raytrace::SimdType<_Base,_Width>>
 {
   typedef typename NumTraits<_Base>::Real Real;
   typedef ::Raytrace::SimdType<typename NumTraits<_Base>::NonInteger,_Width> NonInteger;

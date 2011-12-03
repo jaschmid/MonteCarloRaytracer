@@ -42,10 +42,11 @@ namespace Raytrace {
 		DXTC5
 	} IMAGE_FORMAT;
 
-	template<IMAGE_FORMAT _format> class Pixel
-	{
-		//static_assert(false,"Unknown Pixel format");
-	};
+	// Signature
+	template<IMAGE_FORMAT _format> class Pixel;
+
+	// Signature
+	template<IMAGE_FORMAT source,IMAGE_FORMAT dest> class PixelConverter;
 
 	template<> class Pixel<R8G8B8A8>
 	{
@@ -229,14 +230,119 @@ namespace Raytrace {
 	public:
 		EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 	};
+
+	/* Alpha Converter */
+
+	template<IMAGE_FORMAT _sourceFormat,IMAGE_FORMAT _destFormat,class _sourceType,class _destType> class ConvertAlpha 
+	{
+	public:
+		static void SetAlpha(const Pixel<_sourceFormat>& source,Pixel<_destFormat>& dest)
+		{
+			u64 val = (u64)source.Alpha();
+			val *= Pixel<_destFormat>::AlphaMax;
+			val /= Pixel<_sourceFormat>::AlphaMax;
+			dest.SetAlpha(static_cast<typename Pixel<_destFormat>::AlphaType>(val));
+		}
+	};
+	template<IMAGE_FORMAT _sourceFormat,IMAGE_FORMAT _destFormat,class _sourceType> class ConvertAlpha<_sourceFormat,_destFormat,_sourceType,void>
+	{public: static void SetAlpha(const Pixel<_sourceFormat>& source,Pixel<_destFormat>& dest){}};
+	template<IMAGE_FORMAT _sourceFormat,IMAGE_FORMAT _destFormat> class ConvertAlpha<_sourceFormat,_destFormat,void,void>
+	{public: static void SetAlpha(const Pixel<_sourceFormat>& source,Pixel<_destFormat>& dest){}};
+
+	template<IMAGE_FORMAT _sourceFormat,IMAGE_FORMAT _destFormat,class _destType> class ConvertAlpha<_sourceFormat,_destFormat,void,_destType>
+	{
+	public:
+		static void SetAlpha(const Pixel<_sourceFormat>& source,Pixel<_destFormat>& dest)
+		{
+			dest.SetAlpha(static_cast<typename Pixel<_destFormat>::AlphaType>(Pixel<_destFormat>::AlphaMax));
+		}
+	};
+	
+	/* Red Converter */
+
+	template<IMAGE_FORMAT _sourceFormat,IMAGE_FORMAT _destFormat,class _sourceType,class _destType> class ConvertRed 
+	{
+	public:
+		static void SetRed(const Pixel<_sourceFormat>& source,Pixel<_destFormat>& dest)
+		{
+			u64 val = (u64)source.Red();
+			val *= Pixel<_destFormat>::RedMax;
+			val /= Pixel<_sourceFormat>::RedMax;
+			dest.SetRed(static_cast<typename Pixel<_destFormat>::RedType>(val));
+		}
+	};
+	template<IMAGE_FORMAT _sourceFormat,IMAGE_FORMAT _destFormat,class _sourceType> class ConvertRed<_sourceFormat,_destFormat,_sourceType,void>
+	{public: static void SetRed(const Pixel<_sourceFormat>& source,Pixel<_destFormat>& dest){}};
+	template<IMAGE_FORMAT _sourceFormat,IMAGE_FORMAT _destFormat> class ConvertRed<_sourceFormat,_destFormat,void,void>
+	{public: static void SetRed(const Pixel<_sourceFormat>& source,Pixel<_destFormat>& dest){}};
+	template<IMAGE_FORMAT _sourceFormat,IMAGE_FORMAT _destFormat,class _destType> class ConvertRed<_sourceFormat,_destFormat,void,_destType>
+	{
+	public:
+		static void SetRed(const Pixel<_sourceFormat>& source,Pixel<_destFormat>& dest)
+		{
+			dest.SetRed(static_cast<typename Pixel<_destFormat>::RedType>(Pixel<_destFormat>::RedMax));
+		}
+	};
+	
+	/* Green Converter */
+
+	template<IMAGE_FORMAT _sourceFormat,IMAGE_FORMAT _destFormat,class _sourceType,class _destType> class ConvertGreen 
+	{
+	public:
+		static void SetGreen(const Pixel<_sourceFormat>& source,Pixel<_destFormat>& dest)
+		{
+			u64 val = (u64)source.Green();
+			val *= Pixel<_destFormat>::GreenMax;
+			val /= Pixel<_sourceFormat>::GreenMax;
+			dest.SetGreen(static_cast<typename Pixel<_destFormat>::GreenType>(val));
+		}
+	};
+	template<IMAGE_FORMAT _sourceFormat,IMAGE_FORMAT _destFormat,class _sourceType> class ConvertGreen<_sourceFormat,_destFormat,_sourceType,void>
+	{public: static void SetGreen(const Pixel<_sourceFormat>& source,Pixel<_destFormat>& dest){}};
+	template<IMAGE_FORMAT _sourceFormat,IMAGE_FORMAT _destFormat> class ConvertGreen<_sourceFormat,_destFormat,void,void>
+	{public: static void SetGreen(const Pixel<_sourceFormat>& source,Pixel<_destFormat>& dest){}};
+	template<IMAGE_FORMAT _sourceFormat,IMAGE_FORMAT _destFormat,class _destType> class ConvertGreen<_sourceFormat,_destFormat,void,_destType>
+	{
+	public:
+		static void SetGreen(const Pixel<_sourceFormat>& source,Pixel<_destFormat>& dest)
+		{
+			dest.SetGreen(static_cast<typename Pixel<_destFormat>::GreenType>(Pixel<_destFormat>::GreenMax));
+		}
+	};
+
+	/* Blue Converter */
+
+	template<IMAGE_FORMAT _sourceFormat,IMAGE_FORMAT _destFormat,class _sourceType,class _destType> class ConvertBlue 
+	{
+	public:
+		static void SetBlue(const Pixel<_sourceFormat>& source,Pixel<_destFormat>& dest)
+		{
+			u64 val = (u64)source.Blue();
+			val *= Pixel<_destFormat>::BlueMax;
+			val /= Pixel<_sourceFormat>::BlueMax;
+			dest.SetBlue(static_cast<typename Pixel<_destFormat>::BlueType>(val));
+		}
+	};
+	template<IMAGE_FORMAT _sourceFormat,IMAGE_FORMAT _destFormat,class _sourceType> class ConvertBlue<_sourceFormat,_destFormat,_sourceType,void>
+	{public: static void SetBlue(const Pixel<_sourceFormat>& source,Pixel<_destFormat>& dest){}};
+	template<IMAGE_FORMAT _sourceFormat,IMAGE_FORMAT _destFormat> class ConvertBlue<_sourceFormat,_destFormat,void,void>
+	{public: static void SetBlue(const Pixel<_sourceFormat>& source,Pixel<_destFormat>& dest){}};
+	template<IMAGE_FORMAT _sourceFormat,IMAGE_FORMAT _destFormat,class _destType> class ConvertBlue<_sourceFormat,_destFormat,void,_destType>
+	{
+	public:
+		static void SetBlue(const Pixel<_sourceFormat>& source,Pixel<_destFormat>& dest)
+		{
+			dest.SetBlue(static_cast<typename Pixel<_destFormat>::BlueType>(Pixel<_destFormat>::BlueMax));
+		}
+	};
 	
 	template<IMAGE_FORMAT source,IMAGE_FORMAT dest> class PixelConverter
 	{
 	public:
 
-		static typename Pixel<dest> Convert(typename const Pixel<source>& s)
+		static Pixel<dest> Convert(const Pixel<source>& s)
 		{
-			typename Pixel<dest> d;
+			Pixel<dest> d;
 			ConvertRed<source,dest,typename Pixel<source>::RedType,typename Pixel<dest>::RedType>::SetRed(s,d);
 			ConvertGreen<source,dest,typename Pixel<source>::GreenType,typename Pixel<dest>::GreenType>::SetGreen(s,d);
 			ConvertBlue<source,dest,typename Pixel<source>::BlueType,typename Pixel<dest>::BlueType>::SetBlue(s,d);
@@ -244,118 +350,12 @@ namespace Raytrace {
 			return d;
 		}
 
-	private:
-		
-		/* Alpha Converter */
-
-		template<IMAGE_FORMAT _sourceFormat,IMAGE_FORMAT _destFormat,class _sourceType,class _destType> class ConvertAlpha 
-		{
-		public:
-			static void SetAlpha(typename const Pixel<_sourceFormat>& source,typename Pixel<_destFormat>& dest)
-			{
-				u64 val = (u64)source.Alpha();
-				val *= typename Pixel<_destFormat>::AlphaMax;
-				val /= typename Pixel<_sourceFormat>::AlphaMax;
-				dest.SetAlpha(static_cast<typename Pixel<_destFormat>::AlphaType>(val));
-			}
-		};
-		template<IMAGE_FORMAT _sourceFormat,IMAGE_FORMAT _destFormat,class _sourceType> class ConvertAlpha<_sourceFormat,_destFormat,_sourceType,void>
-		{public: static void SetAlpha(typename const Pixel<_sourceFormat>& source,typename Pixel<_destFormat>& dest){}};
-		template<IMAGE_FORMAT _sourceFormat,IMAGE_FORMAT _destFormat> class ConvertAlpha<_sourceFormat,_destFormat,void,void>
-		{public: static void SetAlpha(typename const Pixel<_sourceFormat>& source,typename Pixel<_destFormat>& dest){}};
-
-		template<IMAGE_FORMAT _sourceFormat,IMAGE_FORMAT _destFormat,class _destType> class ConvertAlpha<_sourceFormat,_destFormat,void,_destType>
-		{
-		public:
-			static void SetAlpha(typename const Pixel<_sourceFormat>& source,typename Pixel<_destFormat>& dest)
-			{
-				dest.SetAlpha(static_cast<typename Pixel<_destFormat>::AlphaType>(Pixel<_destFormat>::AlphaMax));
-			}
-		};
-		
-		/* Red Converter */
-
-		template<IMAGE_FORMAT _sourceFormat,IMAGE_FORMAT _destFormat,class _sourceType,class _destType> class ConvertRed 
-		{
-		public:
-			static void SetRed(typename const Pixel<_sourceFormat>& source,typename Pixel<_destFormat>& dest)
-			{
-				u64 val = (u64)source.Red();
-				val *= typename Pixel<_destFormat>::RedMax;
-				val /= typename Pixel<_sourceFormat>::RedMax;
-				dest.SetRed(static_cast<typename Pixel<_destFormat>::RedType>(val));
-			}
-		};
-		template<IMAGE_FORMAT _sourceFormat,IMAGE_FORMAT _destFormat,class _sourceType> class ConvertRed<_sourceFormat,_destFormat,_sourceType,void>
-		{public: static void SetRed(typename const Pixel<_sourceFormat>& source,typename Pixel<_destFormat>& dest){}};
-		template<IMAGE_FORMAT _sourceFormat,IMAGE_FORMAT _destFormat> class ConvertRed<_sourceFormat,_destFormat,void,void>
-		{public: static void SetRed(typename const Pixel<_sourceFormat>& source,typename Pixel<_destFormat>& dest){}};
-		template<IMAGE_FORMAT _sourceFormat,IMAGE_FORMAT _destFormat,class _destType> class ConvertRed<_sourceFormat,_destFormat,void,_destType>
-		{
-		public:
-			static void SetRed(typename const Pixel<_sourceFormat>& source,typename Pixel<_destFormat>& dest)
-			{
-				dest.SetRed(static_cast<typename Pixel<_destFormat>::RedType>(Pixel<_destFormat>::RedMax));
-			}
-		};
-		
-		/* Green Converter */
-
-		template<IMAGE_FORMAT _sourceFormat,IMAGE_FORMAT _destFormat,class _sourceType,class _destType> class ConvertGreen 
-		{
-		public:
-			static void SetGreen(typename const Pixel<_sourceFormat>& source,typename Pixel<_destFormat>& dest)
-			{
-				u64 val = (u64)source.Green();
-				val *= typename Pixel<_destFormat>::GreenMax;
-				val /= typename Pixel<_sourceFormat>::GreenMax;
-				dest.SetGreen(static_cast<typename Pixel<_destFormat>::GreenType>(val));
-			}
-		};
-		template<IMAGE_FORMAT _sourceFormat,IMAGE_FORMAT _destFormat,class _sourceType> class ConvertGreen<_sourceFormat,_destFormat,_sourceType,void>
-		{public: static void SetGreen(typename const Pixel<_sourceFormat>& source,typename Pixel<_destFormat>& dest){}};
-		template<IMAGE_FORMAT _sourceFormat,IMAGE_FORMAT _destFormat> class ConvertGreen<_sourceFormat,_destFormat,void,void>
-		{public: static void SetGreen(typename const Pixel<_sourceFormat>& source,typename Pixel<_destFormat>& dest){}};
-		template<IMAGE_FORMAT _sourceFormat,IMAGE_FORMAT _destFormat,class _destType> class ConvertGreen<_sourceFormat,_destFormat,void,_destType>
-		{
-		public:
-			static void SetGreen(typename const Pixel<_sourceFormat>& source,typename Pixel<_destFormat>& dest)
-			{
-				dest.SetGreen(static_cast<typename Pixel<_destFormat>::GreenType>(Pixel<_destFormat>::GreenMax));
-			}
-		};
-
-		/* Blue Converter */
-
-		template<IMAGE_FORMAT _sourceFormat,IMAGE_FORMAT _destFormat,class _sourceType,class _destType> class ConvertBlue 
-		{
-		public:
-			static void SetBlue(typename const Pixel<_sourceFormat>& source,typename Pixel<_destFormat>& dest)
-			{
-				u64 val = (u64)source.Blue();
-				val *= typename Pixel<_destFormat>::BlueMax;
-				val /= typename Pixel<_sourceFormat>::BlueMax;
-				dest.SetBlue(static_cast<typename Pixel<_destFormat>::BlueType>(val));
-			}
-		};
-		template<IMAGE_FORMAT _sourceFormat,IMAGE_FORMAT _destFormat,class _sourceType> class ConvertBlue<_sourceFormat,_destFormat,_sourceType,void>
-		{public: static void SetBlue(typename const Pixel<_sourceFormat>& source,typename Pixel<_destFormat>& dest){}};
-		template<IMAGE_FORMAT _sourceFormat,IMAGE_FORMAT _destFormat> class ConvertBlue<_sourceFormat,_destFormat,void,void>
-		{public: static void SetBlue(typename const Pixel<_sourceFormat>& source,typename Pixel<_destFormat>& dest){}};
-		template<IMAGE_FORMAT _sourceFormat,IMAGE_FORMAT _destFormat,class _destType> class ConvertBlue<_sourceFormat,_destFormat,void,_destType>
-		{
-		public:
-			static void SetBlue(typename const Pixel<_sourceFormat>& source,typename Pixel<_destFormat>& dest)
-			{
-				dest.SetBlue(static_cast<typename Pixel<_destFormat>::BlueType>(Pixel<_destFormat>::BlueMax));
-			}
-		};
 	};
 
 	template<IMAGE_FORMAT dest> class PixelConverter<RGBA_FLOAT32,dest>
 	{
 	public:
-		static typename Pixel<dest> Convert(typename const Pixel<RGBA_FLOAT32>& s)
+		static Pixel<dest> Convert(const Pixel<RGBA_FLOAT32>& s)
 		{
 			Pixel<R8G8B8A8> i;
 			i.SetRed((u8)(s.Red()*255.0f));
@@ -522,17 +522,17 @@ namespace Raytrace {
 
 		/*public functions*/
 
-		const PixelType& operator()(u32 x,u32 y) const {assert(x<_size.x); assert(y<_size.y); return getPixel(x,y);}
-		u32 XSize() const{return _size.x;}
-		u32 YSize() const{return _size.y;}
+		const PixelType& operator()(u32 x,u32 y) const {assert(x<_size.x()); assert(y<_size.y()); return getPixel(x,y);}
+		u32 XSize() const{return _size.x();}
+		u32 YSize() const{return _size.y();}
 		
 		ConstImageRect<_format> Rect(const Vector4u& sub) const
 		{
-			assert(sub.x < sub.z);
-			assert(sub.y < sub.w);
-			assert(sub.z <= XSize());
-			assert(sub.w <= YSize());
-			return ConstImageRect<_format>(_data,Vector4i(sub.x+_rect.x,sub.y+_rect.y,sub.z+_rect.x,sub.w+_rect.y),_stride);
+			assert(sub.x() < sub.z());
+			assert(sub.y() < sub.w());
+			assert(sub.z() <= XSize());
+			assert(sub.w() <= YSize());
+			return ConstImageRect<_format>(_data,Vector4i(sub.x()+_rect.x(),sub.y()+_rect.y(),sub.z()+_rect.x(),sub.w()+_rect.y()),_stride);
 		}
 
 	private:
@@ -540,12 +540,12 @@ namespace Raytrace {
 
 		/*private coonstructors*/
 		ConstImageRect(const PixelType* pData,const Vector4u& rect,const u32& stride):
-			_rect(rect),_data(pData),_size(rect.z-rect.x,rect.w-rect.y),_stride(stride)
+			_rect(rect),_data(pData),_size(rect.z()-rect.x(),rect.w()-rect.y()),_stride(stride)
 		{
 		}
 
 		/*private functions*/
-		const PixelType& getPixel(u32 x,u32 y) const {return _data[(y+_rect.y)*stride+(x+rect.x)];}
+		const PixelType& getPixel(u32 x,u32 y) const {return _data[(y+_rect.y())*_stride+(x+_rect.x())];}
 
 		/*private members*/
 		const Vector2u	_size;
@@ -558,6 +558,8 @@ namespace Raytrace {
 	public:
 		EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 	};
+	
+	template<class _PixelType> class UncompressedImageData;
 
 	template<IMAGE_FORMAT _format> class ImageRect
 	{
@@ -624,7 +626,7 @@ namespace Raytrace {
 			assert(sub.y() < sub.w());
 			assert(sub.z() <= XSize());
 			assert(sub.w() <= YSize());
-			return ImageRect<_format>(_data,Vector4u(sub.x+_rect.x,sub.y+_rect.y,sub.z+_rect.x,sub.w+_rect.y),_stride);
+			return ImageRect<_format>(_data,Vector4u(sub.x()+_rect.x(),sub.y()+_rect.y(),sub.z()+_rect.x(),sub.w()+_rect.y()),_stride);
 		}
 		
 		ConstImageRect<_format> Rect(const Vector4u& sub) const
@@ -633,7 +635,7 @@ namespace Raytrace {
 			assert(sub.y() < sub.w());
 			assert(sub.z() <= XSize());
 			assert(sub.w() <= YSize());
-			return ConstImageRect<_format>(_data,Vector4u(sub.x+_rect.x,sub.y+_rect.y,sub.z+_rect.x,sub.w+_rect.y),_stride);
+			return ConstImageRect<_format>(_data,Vector4u(sub.x()+_rect.x(),sub.y()+_rect.y(),sub.z()+_rect.x(),sub.w()+_rect.y()),_stride);
 		}
 
 	private:
@@ -665,7 +667,7 @@ namespace Raytrace {
 	{
 	public:
 
-		typename _PixelType PixelType;
+		typedef _PixelType PixelType;
 
 		/*public constructors*/
 

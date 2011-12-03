@@ -16,16 +16,17 @@ public:
 public slots:
 	void		openScene();
 	void		previewRefresh();
-	void		previewSetMultisamples(int samples);
 	void		previewSetCamera(QString camera);
-	void		previewSetRenderingEngine(QString engine);
 	void		updatePreviewOutput();
 	void		previewOutputRefresh();
 
+	void		previewSetRenderingEngine(QString engine);
+	void		previewSetIntersector(QString engine);
+	void		previewSetIntegrator(QString engine);
+	void		previewSetSampler(QString engine);
 signals:
 
 	void		sceneChanged(QString);
-	void		previewMultisamplesChanged(int);
 	void		previewCameraChanged(QString);
 
 private:

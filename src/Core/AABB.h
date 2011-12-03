@@ -43,7 +43,7 @@ namespace Raytrace {
 			max() = Vector3( std::max(a.max().x(),b.x()) , std::max(a.max().y(),b.y()), std::max(a.max().z(),b.z()) );
 		}
 
-		inline AABB(const Triangle& tri)
+		template<class _Base> inline AABB(const _Base& tri)
 		{
 			*this = Empty();
 
@@ -113,7 +113,7 @@ namespace Raytrace {
 		{
 		}
 
-		inline AABBAccel(const std::array<AABB,Width>& right)
+		template<class _Base> inline AABBAccel(const ConstArrayWrapper<_Base>& right)
 		{
 			Scalar_T min_x,min_y,min_z;
 			Scalar_T max_x,max_y,max_z;
@@ -142,7 +142,7 @@ namespace Raytrace {
 			return _data[1];
 		}
 
-		__declspec(align(64)) Vector_T _data[2];
+		ALIGN_SIMD Vector_T _data[2];
 	};
 
 	

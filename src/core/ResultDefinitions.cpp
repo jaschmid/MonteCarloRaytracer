@@ -13,5 +13,6 @@ namespace Raytrace {
 	Result::ResultClass const Result::NoOutputSet(0x00000004,String("No output set"));
 	Result::ResultClass const Result::FileNotFound(0x00000005,String("File not Found"));
 	Result::ResultClass const Result::ParsingError(0x00000006,String("Parsing Error"));
+	Result::ResultClass const Result::NotImplemented(0x00000007,String("Not Implemented"));
 
 }

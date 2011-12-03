@@ -6,6 +6,8 @@
 
 #include <RaytraceCommon.h>
 #include <array>
+#include "SIMDType.h"
+#include "IntersectorBase.h"
 
 #ifndef RAYTRACE_AABB_H_INCLUDED
 #define RAYTRACE_AABB_H_INCLUDED
@@ -15,6 +17,12 @@ namespace Raytrace {
 
 	struct AABB
 	{
+		typedef AABB Minimum;
+		typedef PrimitiveClassAxisAlignedBox PrimitiveClass;
+		typedef Vector3 Vector_T;
+		typedef Vector3i Integer_T;
+		typedef f32 Scalar_T;
+
 		inline AABB(const Vector3& min_,const Vector3& max_)
 		{
 			min() = min_;
@@ -35,7 +43,7 @@ namespace Raytrace {
 			max() = Vector3( std::max(a.max().x(),b.x()) , std::max(a.max().y(),b.y()), std::max(a.max().z(),b.z()) );
 		}
 
-		inline AABB(const Triangle& tri)
+		template<class _Base> inline AABB(const _Base& tri)
 		{
 			*this = Empty();
 
@@ -92,6 +100,52 @@ namespace Raytrace {
 		std::array<Vector3,2> _data;
 	};
 
+	template<int _Width> struct AABBAccel
+	{
+		typedef AABB Minimum;
+		typedef PrimitiveClassAxisAlignedBox PrimitiveClass;
+
+		typedef typename Vector3v<_Width>::type Vector_T;
+		typedef SimdType<float,_Width> Scalar_T;
+		static const int Width = _Width;
+
+		inline AABBAccel()
+		{
+		}
+
+		template<class _Base> inline AABBAccel(const ConstArrayWrapper<_Base>& right)
+		{
+			Scalar_T min_x,min_y,min_z;
+			Scalar_T max_x,max_y,max_z;
+
+			for(int i = 0; i < Width; ++i)
+			{
+				min_x[i] = right[i].min().x();
+				min_y[i] = right[i].min().y();
+				min_z[i] = right[i].min().z();
+				
+				max_x[i] = right[i].max().x();
+				max_y[i] = right[i].max().y();
+				max_z[i] = right[i].max().z();
+			}
+
+			_data[0] = Vector_T(min_x,min_y,min_z);
+			_data[1] = Vector_T(max_x,max_y,max_z);
+		}
+
+		inline const Vector_T& min() const
+		{
+			return _data[0];
+		}
+		inline const Vector_T& max() const
+		{
+			return _data[1];
+		}
+
+		ALIGN_SIMD Vector_T _data[2];
+	};
+
+	
 }
 
 #endif

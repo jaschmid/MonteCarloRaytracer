@@ -19,12 +19,18 @@
 #ifndef RAYTRACE_CORE_HEADERS_GUARD
 #define RAYTRACE_CORE_HEADERS_GUARD
 
+#pragma warning(disable:2586)
+#pragma warning(disable:4996)
 #include <RaytraceScene.h>
 #include <RaytraceCamera.h>
 #include <RaytraceMaterial.h>
 #include <RaytraceTriMesh.h>
 #include <RaytraceObject.h>
 #include <RaytraceXmlParser.h>
+
+#include "Aligned.h"
+
+#define TIXML_USE_STL
 
 #include <../TinyXml/tinyxml.h>
 

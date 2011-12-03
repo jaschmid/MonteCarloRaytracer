@@ -5,6 +5,8 @@
 #include "SimpleIntersector.h"
 #include "WhittedShader.h"
 
+#ifdef SIMPLE_ENGINE
+
 namespace Raytrace {
 
 boost::shared_ptr<RaytraceEngineBase>	CreateSimpleEngine(const GenericEngineSettings& settings)
@@ -12,15 +14,13 @@ boost::shared_ptr<RaytraceEngineBase>	CreateSimpleEngine(const GenericEngineSett
 	SimpleIntersector		simpleIntersector;
 	WhittedShader			whittedShader;
 
-	SceneReader				sceneReader(settings._scene);
+	SceneReader				sceneReader(settings._scene,settings._camera);
 
 	switch(settings._format)
 	{
 	case R8G8B8A8:
 		{
-			SimpleSampleGenerator<ImageRect<R8G8B8A8>>	simpleGenerator(
-				ImageRect<R8G8B8A8>(settings._pDataOut,Vector2u(settings._iXResolution,settings._iYResolution),settings._nDataSize/settings._iYResolution/sizeof(Pixel<R8G8B8A8>))
-				);
+			SimpleSampleGenerator<ImageRect<R8G8B8A8>>	simpleGenerator(settings._iXResolution,settings._iYResolution);
 			simpleGenerator._camera = settings._camera;
 			simpleGenerator._output = settings._output;
 
@@ -28,9 +28,7 @@ boost::shared_ptr<RaytraceEngineBase>	CreateSimpleEngine(const GenericEngineSett
 		}
 	case A8R8G8B8:
 		{
-			SimpleSampleGenerator<ImageRect<A8R8G8B8>>	simpleGenerator(
-				ImageRect<A8R8G8B8>(settings._pDataOut,Vector2u(settings._iXResolution,settings._iYResolution),settings._nDataSize/settings._iYResolution/sizeof(Pixel<A8R8G8B8>))
-				);
+			SimpleSampleGenerator<ImageRect<A8R8G8B8>>	simpleGenerator(settings._iXResolution,settings._iYResolution);
 			simpleGenerator._camera = settings._camera;
 			simpleGenerator._output = settings._output;
 
@@ -43,3 +41,5 @@ boost::shared_ptr<RaytraceEngineBase>	CreateSimpleEngine(const GenericEngineSett
 }
 
 }
+
+#endif

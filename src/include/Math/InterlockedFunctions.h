@@ -20,13 +20,19 @@
 
 #if defined(COMPILER_MSVC)
 
-#define NOMINMAX
 #include <Windows.h>
 #include <intrin.h>
 
 namespace Raytrace {
 
 /*interlocked increment*/
+	
+#ifdef TARGET_X86
+inline size_t InterlockedIncrement(volatile size_t& p)
+{
+    return (size_t)::_InterlockedIncrement((volatile i32*)&p);
+}
+#endif
 
 inline u16 InterlockedIncrement(volatile u16& p)
 {
@@ -64,6 +70,13 @@ inline i64 InterlockedIncrement(volatile i64& p)
 
 /*interlocked decrement*/
 
+#ifdef TARGET_X86
+inline size_t InterlockedDecrement(volatile size_t& p)
+{
+    return (size_t)::_InterlockedDecrement((volatile i32*)&p);
+}
+#endif
+
 inline u32 InterlockedDecrement(volatile u32& p)
 {
     return (u32)::_InterlockedDecrement((volatile i32*)&p);
@@ -99,6 +112,11 @@ inline i16 InterlockedDecrement(volatile i16& p)
 }
 
 /*interlocked compare exchange*/
+
+inline unsigned int InterlockedCompareExchange(volatile unsigned int& p,u32 exchange, unsigned int compare)
+{
+    return (unsigned int)::InterlockedCompareExchange((volatile i32*)&p,(i32)exchange,(i32)compare);
+}
 
 inline u32 InterlockedCompareExchange(volatile u32& p,u32 exchange, u32 compare)
 {

@@ -38,14 +38,13 @@ template<class _ImageRect> struct DummySampleGenerator
 	{
 		typedef DummySampleGeneratorEngine<_ImageRect,_SampleData,_RayData> type;
 	};
-
-	DummySampleGenerator(const _ImageRect& rect) : _outputImageRect(rect) {}
 	
-	typedef _ImageRect OutputImageRect;
+	DummySampleGenerator(size_t xRes,size_t yRes) : _xResolution(xRes),_yResolution(yRes) {}
+	
+	size_t					_xResolution;
+	size_t					_yResolution;
 	typedef EngineMultiThreaded ThreadingMode;
 	typedef EngineGenerator EngineType;
-
-	OutputImageRect			_outputImageRect;
 };
 
 struct DummyIntersector
@@ -76,21 +75,25 @@ template<class _OutputImageRect,class _SampleData,class _RayData> struct DummySa
 	typedef _RayData RayData;
 	typedef _OutputImageRect OutputImageRect;
 
-	inline DummySampleGeneratorEngine(const DummySampleGenerator<_OutputImageRect>& shader,SampleData& samples,RayData& rayData) : _outputImageRect(shader._outputImageRect){}
+	inline DummySampleGeneratorEngine(const DummySampleGenerator<_OutputImageRect>& shader,SampleData& samples,RayData& rayData) : _imageSize(shader._xResolution,shader._yResolution){}
 	inline void prepare(int numThreads) {}
-	inline int gatherOutput() 
-	{
+	inline int gatherOutput(void* pOut,size_t nOut) 
+	{	
+		_OutputImageRect out(pOut,Vector2u(_imageSize.x(),_imageSize.y()),(u32)(nOut/_imageSize.y()/sizeof(Pixel<R8G8B8A8>)));
+
 		Pixel<A8R8G8B8> c1;
 		c1.SetRed(0xff);
 		c1.SetBlue(0x00);
 		c1.SetGreen(0x00);
-		FillRectangle(_outputImageRect, c1);
+		FillRectangle(out, c1);
 		return 0;
 	}
-	inline void pushGenerate() {};
+	inline void prepareGenerating() {}
+	inline void completeGenerating() {}
+	inline void pushCompleted() {}
 	inline int threadEnter(int iThreadId) {return 0;}
 
-	OutputImageRect			_outputImageRect;
+	Vector2u				_imageSize;
 	public:
 		EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };
@@ -117,19 +120,22 @@ template<class _SampleData,class _RayData> struct DummyShaderEngine
 struct DummySampleData
 {
 	inline DummySampleData() {}
-	inline void preparePushingSamples() {}
 	inline void prepare(int numThreads) {}
 	inline bool emptyStack() const { return true;}
 	inline void pushStack() {}
 	inline void popStack() {}
 	inline void popShaded() {}
-	inline bool hasSamplesToShade() { return false; }
-	inline bool hasSamplesToSubsample() { return false; }
+	inline bool hasIntersectionsToShade() { return false; }
+	inline bool hasIntersectionsToSubsample() { return false; }
 	inline void completeShading() {}
 	inline void completeSubsampling() {}
-	inline void completePushingSamples() {}
+	inline void completeGenerating() {}
+	inline void completeIntersecting() {}
 	inline void prepareShading() {}
 	inline void prepareSubsampling() {}
+	inline void prepareGenerating() {}
+	inline void prepareIntersecting() {}
+	inline void clearOut(){}
 };
 
 struct DummyRayData

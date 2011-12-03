@@ -29,13 +29,210 @@
 
 
 namespace Raytrace {
+	
+struct AnyHitRay{};
+struct FirstHitRay{};
 
-#ifdef _DEBUG
-static const int RAYS_PER_BLOCK		= 4;
-#else
-static const int RAYS_PER_BLOCK		= 16;
-#endif
+namespace fusion = boost::fusion;
+namespace mpl = boost::mpl;
 
+typedef boost::mpl::vector< AnyHitRay , FirstHitRay >::type RayClassifications;
+
+template<class _RayType,class _PrimitiveType,int _RaysPerBlock> struct SimpleRayData
+{
+	
+	template<class _RayClassification> struct Element;
+	template<class _RayClassification> struct Data;
+
+public:
+	
+	static const size_t RaysPerBlock = _RaysPerBlock;
+	static const size_t Dimensions = _RayType::Dimensions;
+
+	typedef _RayType RayType;
+	typedef _PrimitiveType PrimitiveType;
+	typedef typename _RayType::Scalar_T Scalar;
+	typedef typename _RayType::RelativeLocation			RayRelativeIntersection;
+	typedef typename _PrimitiveType::RelativeLocation	PrimitiveRelativeIntersection;
+	typedef typename _PrimitiveType::UserData			PrimitiveUserData;
+	typedef Eigen::Matrix<Scalar,Dimensions,1>			AbsoluteIntersectionLocation;
+	
+
+	static_assert(_RayType::Dimensions == _PrimitiveType::Dimensions, "Ray type and Primitive type must have the same amount of dimensions!");
+	static_assert(std::is_same<typename _RayType::Scalar_T,typename _PrimitiveType::Scalar_T>::value, "Ray and primitive must have same scalar type!");
+
+
+	template<class _RayType> 
+	struct iterator
+	{
+		typedef _RayType RayType;
+		typedef typename Data<RayType>::DataType::MultiAccessIterator Iterator;
+		typedef Element<RayType> Element;
+		static const size_t Size = 1;
+		typedef iterator<RayType> ThisType;
+
+		inline iterator(size_t thread,Iterator* iterator) : _iterator(iterator),_thread(thread)
+		{
+			if(iterator)
+				_element = _iterator->getNextElementPointer(_thread);
+			else
+				_element = nullptr;
+		}
+
+		inline const Element& element() const
+		{
+			return *_element;
+		}
+
+		inline const Element& operator*() const
+		{
+			return *_element;
+		}
+
+		inline  const Element* operator->() const
+		{
+			return _element;
+		}
+
+		inline iterator& operator++()
+		{
+			_element = _iterator->getNextElementPointer(_thread);
+			return *this;
+		}
+		
+		inline iterator& operator++(int)
+		{
+			_element = _iterator->getNextElementPointer(_thread);
+			return *this;
+		}
+
+		inline bool operator ==(const ThisType& right) const
+		{
+			return right._element == _element;
+		}
+		
+		inline bool operator !=(const ThisType& right) const
+		{
+			return right._element != _element;
+		}
+
+		const size_t _thread;
+		const Element* _element;
+		Iterator* const _iterator;
+	};
+
+	template<class _RayType> 
+	inline iterator<_RayType> begin(size_t threadId) 
+	{
+		return iterator<_RayType>(threadId,&fusion::at_key<_RayType>(_data)._iterator);
+	}
+
+	template<class _RayType> 
+	inline iterator<_RayType> end() 
+	{
+		return iterator<_RayType>(0,nullptr);
+	}
+	
+	inline void PrepareIntersectST()
+	{
+		fusion::at_key<FirstHitRay>(_data)._iterator = fusion::at_key<FirstHitRay>(_data)._data.begin();
+		fusion::at_key<AnyHitRay>(_data)._iterator = fusion::at_key<AnyHitRay>(_data)._data.begin();
+	}
+	
+	inline void PrepareIntegrateST()
+	{
+	}
+	
+	inline void CompleteIntersectST()
+	{
+		fusion::at_key<FirstHitRay>(_data)._data.clear();
+		fusion::at_key<AnyHitRay>(_data)._data.clear();
+	}
+	
+	inline void CompleteIntegrateST()
+	{
+	}
+
+	inline void pushRay(size_t threadId,const RayType& ray,
+		AbsoluteIntersectionLocation* absoluteIntersectionLocation,
+		RayRelativeIntersection* rayRelativeIntersectionLocation,
+		PrimitiveRelativeIntersection* primitiveRelativeIntersectionLocation,
+		PrimitiveUserData* primitiveIdentifier)
+	{
+		Data<FirstHitRay>& data = fusion::at_key<FirstHitRay>(_data);
+		i32 index = data._data.pushElements(threadId,1);
+		Element<FirstHitRay>& element = data._data.getElement(index);
+		element.ray = ray;
+		element.absoluteIntersectionLocation = absoluteIntersectionLocation;
+		element.rayRelativeIntersectionLocation = rayRelativeIntersectionLocation;
+		element.primitiveRelativeIntersectionLocation = primitiveRelativeIntersectionLocation;
+		element.primitiveIdentifier = primitiveIdentifier;
+	}
+	
+	inline void pushRay(size_t threadId,const RayType& ray,u32* pResultOut,u32 resultIndex = 0)
+	{
+		Data<AnyHitRay>& data = fusion::at_key<AnyHitRay>(_data);
+		i32 index = data._data.pushElements(threadId,1);
+		Element<AnyHitRay>& element = data._data.getElement(index);
+		element.ray = ray;
+		element.resultOut = pResultOut;
+		element.resultIndex = resultIndex;
+	}
+
+	inline void InitializeST(size_t numThreads)
+	{
+		fusion::at_key<FirstHitRay>(_data)._data.prepare(numThreads);
+		fusion::at_key<AnyHitRay>(_data)._data.prepare(numThreads);
+	}
+	
+	inline size_t getNumFirstHitRays() const
+	{
+		return fusion::at_key<FirstHitRay>(_data)._data.size();
+	}
+
+	inline size_t getNumAnyHitRays() const
+	{
+		return fusion::at_key<AnyHitRay>(_data)._data.size();
+	}
+private:
+
+	template<class _RayClassification> struct Element
+	{
+		RayType ray;
+		AbsoluteIntersectionLocation* absoluteIntersectionLocation;
+		RayRelativeIntersection* rayRelativeIntersectionLocation;
+		PrimitiveRelativeIntersection* primitiveRelativeIntersectionLocation;
+		PrimitiveUserData* primitiveIdentifier;
+	};
+
+	template<> struct Element<AnyHitRay>
+	{
+		RayType ray;
+		up* resultOut;
+		up	 resultIndex;
+	};
+
+	template<class _RayClassification> struct Data
+	{
+		typedef ConcurrentStorage<Element<_RayClassification>,RaysPerBlock> DataType;
+		
+		typename DataType::MultiAccessIterator	_iterator;
+
+		DataType								_data;
+	};
+
+	typedef Data<AnyHitRay> AnyRayData;
+	typedef Data<FirstHitRay> FirstRayData;
+
+	typedef boost::fusion::map<
+				std::pair<AnyHitRay,AnyRayData>,
+				std::pair<FirstHitRay,FirstRayData>
+	> DataMapType;
+
+	DataMapType	_data;
+};
+
+/*
 template<class _SampleIdType = u32,class _RayIdType = u32> struct SimpleRayData
 {
 	typedef _SampleIdType SampleIdType;
@@ -237,7 +434,7 @@ private:
 	> DataMapType;
 
 	DataMapType	_data;
-};
+};*/
 
 }
 #endif

@@ -39,6 +39,15 @@
     <Filter Include="Generated Files\IntelRelease_Win32">
       <UniqueIdentifier>{6d5fb44f-e36c-4ebd-b673-a985f2202056}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Generated Files\Debug_Win64">
+      <UniqueIdentifier>{907f9ca9-6047-4e37-9988-ebb7167afc28}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Generated Files\Release_Win64">
+      <UniqueIdentifier>{ccf2ca84-528e-45b5-8344-cd3dbf9df59a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Generated Files\IntelRelease_Win64">
+      <UniqueIdentifier>{2680290f-3c03-4c8d-8c7f-affc058a54b6}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\ui\raytracegui.cpp">
@@ -61,6 +70,9 @@
     </ClCompile>
     <ClCompile Include="..\..\temp\RaytraceGUI\Win32\ReleaseIntel\Moc\moc_raytracegui.cpp">
       <Filter>Generated Files\IntelRelease_Win32</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\temp\RaytraceGUI\x64\Debug\Moc\moc_raytracegui.cpp">
+      <Filter>Generated Files\Debug_Win64</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

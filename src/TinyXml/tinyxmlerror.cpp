@@ -22,6 +22,7 @@ must not be misrepresented as being the original software.
 distribution.
 */
 
+#define TIXML_USE_STL
 #include "tinyxml.h"
 
 // The goal of the seperate error file is to make the first

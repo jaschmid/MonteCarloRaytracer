@@ -132,19 +132,9 @@
            <string>Preview Settings</string>
           </property>
           <layout class="QFormLayout" name="formLayout_2">
-           <item row="4" column="0">
-            <widget class="QLabel" name="label">
-             <property name="text">
-              <string>Multisamples</string>
-             </property>
-            </widget>
-           </item>
-           <item row="4" column="1">
-            <widget class="QSpinBox" name="previewMultisampleCount"/>
-           </item>
-           <item row="1" column="1">
-            <widget class="QComboBox" name="previewCamera"/>
-           </item>
+           <property name="fieldGrowthPolicy">
+            <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
+           </property>
            <item row="1" column="0">
             <widget class="QLabel" name="labelCamera">
              <property name="text">
@@ -152,20 +142,53 @@
              </property>
             </widget>
            </item>
-           <item row="3" column="1">
-            <widget class="QComboBox" name="previewRenderingEngine"/>
+           <item row="1" column="1">
+            <widget class="QComboBox" name="previewCamera"/>
            </item>
            <item row="3" column="0">
             <widget class="QLabel" name="previewRenderingEngineLabel">
              <property name="text">
-              <string>Rendering Engine</string>
+              <string>Engine</string>
              </property>
             </widget>
            </item>
-           <item row="5" column="1">
+           <item row="3" column="1">
+            <widget class="QComboBox" name="previewRenderingEngine"/>
+           </item>
+           <item row="7" column="1">
             <widget class="QPushButton" name="previewRefreshButton">
              <property name="text">
               <string>Refresh</string>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="1">
+            <widget class="QComboBox" name="previewIntegrator"/>
+           </item>
+           <item row="5" column="1">
+            <widget class="QComboBox" name="previewIntersector"/>
+           </item>
+           <item row="6" column="1">
+            <widget class="QComboBox" name="previewSampler"/>
+           </item>
+           <item row="4" column="0">
+            <widget class="QLabel" name="previewIntegratorLabel">
+             <property name="text">
+              <string>Integrator</string>
+             </property>
+            </widget>
+           </item>
+           <item row="5" column="0">
+            <widget class="QLabel" name="previewIntersectorLabel">
+             <property name="text">
+              <string>Intersector</string>
+             </property>
+            </widget>
+           </item>
+           <item row="6" column="0">
+            <widget class="QLabel" name="previewSamplerLabel">
+             <property name="text">
+              <string>Sampler</string>
              </property>
             </widget>
            </item>
@@ -215,38 +238,6 @@
     <hint type="destinationlabel">
      <x>826</x>
      <y>54</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>previewMultisampleCount</sender>
-   <signal>valueChanged(int)</signal>
-   <receiver>RaytraceGUIClass</receiver>
-   <slot>previewSetMultisamples(int)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>808</x>
-     <y>107</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>764</x>
-     <y>-17</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>RaytraceGUIClass</sender>
-   <signal>previewMultisamplesChanged(int)</signal>
-   <receiver>previewMultisampleCount</receiver>
-   <slot>setValue(int)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>851</x>
-     <y>3</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>851</x>
-     <y>113</y>
     </hint>
    </hints>
   </connection>
@@ -314,17 +305,66 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>previewIntegrator</sender>
+   <signal>currentIndexChanged(QString)</signal>
+   <receiver>RaytraceGUIClass</receiver>
+   <slot>previewSetIntegrator(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>820</x>
+     <y>177</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>462</x>
+     <y>388</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>previewIntersector</sender>
+   <signal>currentIndexChanged(QString)</signal>
+   <receiver>RaytraceGUIClass</receiver>
+   <slot>previewSetIntersector(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>820</x>
+     <y>203</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>462</x>
+     <y>388</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>previewSampler</sender>
+   <signal>currentIndexChanged(QString)</signal>
+   <receiver>RaytraceGUIClass</receiver>
+   <slot>previewSetSampler(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>820</x>
+     <y>229</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>462</x>
+     <y>388</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <signal>sceneChanged(QString)</signal>
-  <signal>previewMultisamplesChanged(int)</signal>
   <signal>previewCameraChanged(QString)</signal>
   <slot>openScene()</slot>
-  <slot>previewSetMultisamples(int)</slot>
   <slot>previewRefresh()</slot>
   <slot>previewSetCamera(QString)</slot>
   <slot>previewOutputRefresh()</slot>
   <slot>updatePreviewOutput()</slot>
   <slot>previewSetRenderingEngine(QString)</slot>
+  <slot>previewSetIntegrator(QString)</slot>
+  <slot>previewSetIntersector(QString)</slot>
+  <slot>previewSetSampler(QString)</slot>
  </slots>
 </ui>

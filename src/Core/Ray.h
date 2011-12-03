@@ -5,388 +5,415 @@
 /********************************************************/ 
 
 #include <RaytraceCommon.h>
+#include <boost/mpl/vector.hpp>
+#include "TemplateOptions.h"
+#include "ArrayAdapter.h"
 #include <array>
 #include "SIMDType.h"
 #include "IntersectorBase.h"
+#include "MathHelper.h"
 
 #ifndef RAYTRACE_RAY_H_INCLUDED
 #define RAYTRACE_RAY_H_INCLUDED
 
 namespace Raytrace {
+	
+	struct Tag_RaySignMode;
+	struct Tag_RayLengthMode;
+	struct Tag_RayInvDirMode;
+	struct Tag_RayScalarType;
+	struct Tag_RayDimensions;
 
-	struct Ray
+	struct RaySignModeRuntime;
+	struct RaySignModePrecompute;
+	template<int _X,int _Y,int _Z> struct RaySignModeStatic;
+
+	struct RayLengthModeStored;
+	struct RayLengthModeNone;
+
+	struct RayInvDirModeRuntime;
+	struct RayInvDirModePrecompute;
+
+	template<class _Type> struct RayScalarType;
+	template<int _Dimension> struct RayDimensions;
+
+	struct Tag_RaySignMode
 	{
-	public:
-		typedef Ray Minimum;
-		typedef PrimitiveClassRay PrimitiveClass;
-		typedef Vector3 Vector_T;
-		typedef Vector3i Integer_T;
-		typedef f32 Scalar_T;
-
-		inline Ray(const Vector3& origin_,const Vector3& direction_,float length_) :
-			_origin(origin_),
-			_direction(direction_),
-			_length(length_)
-		{
-		}
-
-		inline Ray(const Ray& other) : 
-			_origin(other._origin),
-			_direction(other._direction),
-			_length(other._length)
-		{
-		}
-
-		inline Ray()
-		{
-		}
-
-		inline ~Ray()
-		{
-		}
-		
-		inline const Vector3& origin() const
-		{
-			return _origin;
-		}
-
-		inline const Vector3& direction() const
-		{
-			return _direction;
-		}
-
-		inline Vector3 end() const
-		{
-			return origin()+direction()*length();
-		}
-
-		inline const Real& length() const
-		{
-			return _length;
-		}
-		
-		inline void setOrigin(const Vector3& origin)
-		{
-			_origin = origin;
-		}
-
-		inline void setDirection(const Vector3& direction)
-		{
-			_direction = direction;
-		}
-
-		inline void setLength(Real length)
-		{
-			_length = length;
-		}
-
-		inline Ray operator +(const Vector3& offset) const
-		{
-			return Ray(origin() + offset,direction(),length());
-		}
-
-		inline Ray& operator +=(const Vector3& offset)
-		{
-			setOrigin(origin() + offset);
-			return *this;
-		}
-		
-		inline Ray operator *(const Real& scale) const
-		{
-			return Ray(origin(),direction(),length()*scale);
-		}
-
-		inline Ray& operator *=(const Real& scale)
-		{
-			setLength(length() * scale);
-			return *this;
-		}
-
-		inline Ray operator *(const Matrix4& matrix) const
-		{
-			Vector4 origin_ext(origin().x(),origin().y(),origin().z(),1.0f);
-			Vector4 direction_ext(direction().x(),direction().y(),direction().z(),0.0f);
-
-			origin_ext = matrix*origin_ext;
-			direction_ext = matrix*direction_ext;
-
-			Real dir_length = direction_ext.norm();
-			direction_ext /= dir_length;
-
-			return Ray(origin_ext.head<3>(),direction_ext.head<3>(),dir_length*_length);
-		}
-
-		inline Ray& operator *=(const Matrix4& matrix)
-		{
-			Vector4 origin_ext(origin().x(),origin().y(),origin().z(),1.0f);
-			Vector4 direction_ext(direction().x(),direction().y(),direction().z(),0.0f);
-
-			origin_ext = matrix*origin_ext;
-			direction_ext = matrix*direction_ext;
-
-			Real dir_length = direction_ext.norm();
-			direction_ext /= dir_length;
-
-			_origin = origin_ext.head<3>();
-			_direction = direction_ext.head<3>();
-			_length *= dir_length;
-
-			return *this;
-		}
-
-		inline const Vector3 operator ()(const Real& t) const
-		{
-			return origin() + direction()*t;
-		}
-
-		Vector3	_origin;
-		Vector3 _direction;
-		Real	_length;
+		typedef RaySignModeRuntime DefaultValue;
 	};
 	
-	struct SignModeRuntime {};
-	struct SignModePrecompute {};
-	template<int _X,int _Y,int _Z> struct SignModeStatic{
-		static const int X = _X;
-		static const int Y = _Y;
-		static const int Z = _Z;
+	struct Tag_RayLengthMode
+	{
+		typedef RayLengthModeNone DefaultValue;
 	};
 
-	struct InvDirModeRuntime {};
-	struct InvDirModePrecompute {};
+	struct Tag_RayInvDirMode
+	{
+		typedef RayInvDirModeRuntime DefaultValue;
+	};
+
+	struct Tag_RayScalarType
+	{
+		typedef RayScalarType<f32> DefaultValue;
+	};
+
+	struct Tag_RayDimensions
+	{
+		typedef RayDimensions<3> DefaultValue;
+	};
+
 	
-	struct FRayOriginReader
-	{ 
-		template<class _RayBase> struct Reader
-		{
-			inline const typename _RayBase::Vector_T& operator()(const _RayBase& ray)
-			{
-				return ray.origin();
-			}
-		};
+	struct RaySignModeRuntime
+	{
+		typedef Tag_RaySignMode Tag;
+		static const bool optionsDefined = true;
+	};
+	struct RaySignModePrecompute
+	{
+		typedef Tag_RaySignMode Tag;
+		static const bool optionsDefined = true;
+	};
+	template<int _X,int _Y,int _Z> struct RaySignModeStatic
+	{
+		typedef Tag_RaySignMode Tag;
+		static const size_t X = _X;
+		static const size_t Y = _Y;
+		static const size_t Z = _Z;
+		static const bool optionsDefined = true;
 	};
 
-	struct FRayDirectionReader
+	struct RayLengthModeStored
 	{
-		template<class _RayBase> struct Reader
-		{
-			inline const typename _RayBase::Vector_T& operator()(const _RayBase& ray)
-			{
-				return ray.direction();
-			}
-		};
+		typedef Tag_RayLengthMode Tag;
+		static const bool optionsDefined = true;
+	};
+	struct RayLengthModeNone
+	{
+		typedef Tag_RayLengthMode Tag;
+		static const bool optionsDefined = true;
 	};
 
-	template<class _Element,int _Dimensions> struct RayBase
+	struct RayInvDirModeRuntime
 	{
-		typedef Ray Minimum;
-		typedef PrimitiveClassRay PrimitiveClass;
-		typedef Eigen::Matrix<_Element,_Dimensions,1> Vector_T;
-		typedef _Element Element;
-		typedef Element Scalar_T;
-		static const int Dimensions = _Dimensions;
+		typedef Tag_RayInvDirMode Tag;
+		static const bool optionsDefined = true;
+	};
+	struct RayInvDirModePrecompute
+	{
+		typedef Tag_RayInvDirMode Tag;
+		static const bool optionsDefined = true;
+	};
 
-		typedef void Base;
-		typedef RayBase<Element,Dimensions> ThisType;
+	template<class _Type> struct RayScalarType
+	{
+		typedef Tag_RayScalarType Tag;
+		static const bool optionsDefined = true;
+		typedef _Type type;
+	};
+	template<int _Dimension> struct RayDimensions
+	{
+		typedef Tag_RayDimensions Tag;
+		static const bool optionsDefined = true;
+		static const size_t value = _Dimension;
+	};	
 
 
-		template<class _RayBase> inline RayBase(const _RayBase& ray) 
+	namespace mpl = boost::mpl;
+	
+	template<class _Options = mpl::vector<>> struct Ray;
+
+	namespace detail
+	{
+
+		struct FRayOriginReader
+		{ 
+			template<class _RayBase> struct Reader
+			{
+				typedef typename typename _RayBase::Vector_T result;
+				inline const typename _RayBase::Vector_T& operator()(const _RayBase& ray)
+				{
+					return ray.origin();
+				}
+			};
+
+			template<class _Signature> struct get
+			{
+				typedef Reader<_Signature> type;
+			};
+		};
+
+		struct FRayDirectionReader
 		{
-			for(int i = 0; i < Dimensions; ++i)
+			template<class _RayBase> struct Reader
+			{
+				typedef typename typename _RayBase::Vector_T result;
+				inline const typename _RayBase::Vector_T& operator()(const _RayBase& ray)
+				{
+					return ray.direction();
+				}
+			};
+
+			template<class _Signature> struct get
+			{
+				typedef Reader<_Signature> type;
+			};
+		};
+
+		template<class _Element,int _Dimensions> struct RayBase
+		{
+			typedef Ray<> Minimum;
+			typedef PrimitiveClassRay PrimitiveClass;
+			typedef Eigen::Matrix<_Element,_Dimensions,1> Vector_T;
+			typedef _Element Element;
+			typedef Element Scalar_T;
+			typedef Scalar_T RelativeLocation;
+			static const int Dimensions = _Dimensions;
+
+			typedef void Base;
+			typedef RayBase<Element,Dimensions> ThisType;
+
+			template<class _Options> struct adapt
+			{
+				typedef Ray<_Options> type;
+			};
+
+
+			template<class _RayBase> inline RayBase(const _RayBase& ray) 
 			{
 				_origin = ConvertAoSToSoA<Vector_T>()(ConstArrayWrapper<_RayBase,void,0,FRayOriginReader>(ray));
 				_direction = ConvertAoSToSoA<Vector_T>()(ConstArrayWrapper<_RayBase,void,0,FRayDirectionReader>(ray));
 			}
-		}
 		
-		inline RayBase()
-		{
-		}
+			inline RayBase()
+			{
+			}
 
-		inline const Vector_T& origin() const { return _origin; }
-		inline const Vector_T& direction() const { return _direction; }
+			inline void setDirection(const Vector_T& direction)
+			{
+				_direction = direction;
+			}
+			
+			inline void setOrigin(const Vector_T& origin)
+			{
+				_origin = origin;
+			}
 
-	private:
-		Vector_T		_origin;
-		Vector_T		_direction;
-	};
+			inline const Vector_T& origin() const { return _origin; }
+			inline const Vector_T& direction() const { return _direction; }
+
+		private:
+			ALIGN_SIMD Vector_T		_origin;
+			Vector_T		_direction;
+		};
 	
-	template<class _Element,int _Dimensions,class _SignMode> struct RaySign : public RayBase<_Element,_Dimensions>
-	{
-		typedef _SignMode SignMode;
-		typedef ThisType Base;
-		typedef RaySign<Element,Dimensions,SignMode> ThisType;
+		// Signature
+		template<class _Options,class _SignMode> struct RaySign;
 
-		template<class _RayBase> inline RaySign(const _RayBase& ray) : Base(ray)
+		// RaySignModeRuntime
+		template<class _Options> struct RaySign<_Options,RaySignModeRuntime> 
+			: public RayBase<typename getOptionByTag<_Options,Tag_RayScalarType>::type::type,getOptionByTag<_Options,Tag_RayDimensions>::type::value>
 		{
-			static_assert(false,"Unsupported Sign Mode");
-		}
+			typedef RaySignModeRuntime SignMode;
+			typedef RayBase<typename getOptionByTag<_Options,Tag_RayScalarType>::type::type,getOptionByTag<_Options,Tag_RayDimensions>::type::value> Base;
+			typedef RaySign<_Options,SignMode> ThisType;
 		
-		inline RaySign() : public Base()
-		{
-		}
-	};
+			template<class _RayBase> inline RaySign(const _RayBase& ray) : Base(ray)
+			{
+			}
+		
+			inline RaySign() : Base()
+			{
+			}
 
-	template<class _Element,int _Dimensions> struct RaySign<_Element,_Dimensions,SignModeRuntime> : public RayBase<_Element,_Dimensions>
-	{
-		typedef SignModeRuntime SignMode;
-		typedef ThisType Base;
-		typedef RaySign<Element,Dimensions,SignMode> ThisType;
-		
-		template<class _RayBase> inline RaySign(const _RayBase& ray) : Base(ray)
-		{
-		}
-		
-		inline RaySign() : public Base()
-		{
-		}
+			inline const typename BooleanOf<typename Base::Scalar_T>::type& sign(int i) const { return Base::direction()[i] <= Zero<typename Base::Scalar_T>(); }
+		};
 
-		inline const typename Scalar_T::Boolean& sign(int i) const { return direction()[i] <= Scalar_T::Zero(); }
-	};
-
-	template<class _Element,int _Dimensions> struct RaySign<_Element,_Dimensions,SignModePrecompute> : public RayBase<_Element,_Dimensions>
-	{
-		typedef SignModePrecompute SignMode;
-		typedef ThisType Base;
-		typedef RaySign<Element,Dimensions,SignMode> ThisType;
-		
-		template<class _RayBase> inline RaySign(const _RayBase& ray) : Base(ray)
+		// RaySignModePrecompute
+		template<class _Options> struct RaySign<_Options,RaySignModePrecompute>
+			: public RayBase<typename getOptionByTag<_Options,Tag_RayScalarType>::type::type,getOptionByTag<_Options,Tag_RayDimensions>::type::value>
 		{
-			for(int i = 0; i < Dimensions; ++i)
-				_sign[i] = direction()[i] <= Scalar_T::Zero();
-		}
+			typedef RaySignModePrecompute SignMode;
+			typedef RayBase<typename getOptionByTag<_Options,Tag_RayScalarType>::type::type,getOptionByTag<_Options,Tag_RayDimensions>::type::value> Base;
+			typedef RaySign<_Options,SignMode> ThisType;
 		
-		inline RaySign(const ThisType& ray) : Base(ray)
-		{
-			for(int i = 0; i < Dimensions; ++i)
-				_sign[i] = ray.sign(i);
-		}
+			template<class _RayBase> inline RaySign(const _RayBase& ray) : Base(ray)
+			{
+				for(int i = 0; i < Base::Dimensions; ++i)
+					_sign[i] = Base::direction()[i] <= Zero<typename Base::Scalar_T>();
+			}
 
-		inline RaySign() : public Base()
-		{
-		}
+			inline RaySign() : Base()
+			{
+			}
 
-		inline const typename Scalar_T::Boolean& sign(int i) const { return _sign[i]; }
+			inline void setDirection(const Base::Vector_T& direction)
+			{
+				Base::setDirection(direction);
+				
+				for(int i = 0; i < Base::Dimensions; ++i)
+					_sign[i] = Base::direction()[i] <= Zero<typename Base::Scalar_T>();
+			}
+
+			inline const typename BooleanOf<typename Base::Scalar_T>::type& sign(int i) const { return _sign[i]; }
 		
-	private:
-		std::array<typename Scalar_T::Boolean,3>		_sign;
-	};
+		private:
+			std::array<typename BooleanOf<typename Base::Scalar_T>::type,3>		_sign;
+		};
 	
-	template<class _Element,int _Dimensions,int _X,int _Y,int _Z> struct RaySign<_Element,_Dimensions,SignModeStatic<_X,_Y,_Z>> : public RayBase<_Element,_Dimensions>
-	{
-		typedef SignModeStatic<_X,_Y,_Z> SignMode;
-		typedef ThisType Base;
-		typedef RaySign<Element,Dimensions,SignMode> ThisType;
-
-		template<class _RayBase> inline RaySign(const _RayBase& ray) : Base(ray)
+		// RaySignModeStatic
+		template<class _Options,int _X,int _Y,int _Z> struct RaySign<_Options,RaySignModeStatic<_X,_Y,_Z>> 
+			: public RayBase<typename getOptionByTag<_Options,Tag_RayScalarType>::type::type,getOptionByTag<_Options,Tag_RayDimensions>::type::value>
 		{
-		}
+			typedef RaySignModeStatic<_X,_Y,_Z> SignMode;
+			typedef RayBase<typename getOptionByTag<_Options,Tag_RayScalarType>::type::type,getOptionByTag<_Options,Tag_RayDimensions>::type::value> Base;
+			typedef RaySign<_Options,SignMode> ThisType;
+
+			template<class _RayBase> inline RaySign(const _RayBase& ray) : Base(ray)
+			{
+			}
+
+			inline RaySign() : Base()
+			{
+			}
 		
-		inline static const typename Scalar_T::Boolean& sign(int i) { return Signs[i]; }
+			inline static const typename Base::Scalar_T::Boolean& sign(int i) { return Signs[i]; }
 		
-	private:
-		static const std::array<int,3> Signs;
-	};
+		private:
+			static const std::array<int,3> Signs;
+		};
 
-	template<class _Element,int _Dimensions,int _X,int _Y,int _Z> const std::array<int,3> RaySign<_Element,_Dimensions,SignModeStatic<_X,_Y,_Z>>::Signs = { _X, _Y, _Z };
+		template<class _Options,int _X,int _Y,int _Z> const std::array<int,3> RaySign<_Options,RaySignModeStatic<_X,_Y,_Z>>::Signs = { _X, _Y, _Z };
 
-	template<class _Element,int _Dimensions,class _SignMode, class _InvDirMode> struct RayInvDir : public RaySign<_Element,_Dimensions,_SignMode>
-	{
-		typedef _InvDirMode InvDirMode;
-		typedef ThisType Base;
-		typedef RayInvDir<Element,Dimensions,SignMode,InvDirMode> ThisType;
-
-		template<class _RayBase> inline RayInvDir(const _RayBase& ray) : Base(ray)
-		{
-			static_assert(false,"Unsupported InvDir Mode");
-		}
-	};
+		// Signature
+		template<class _Options, class _InvDirMode> struct RayInvDir;
 	
-	template<class _Element,int _Dimensions,class _SignMode> struct RayInvDir<_Element,_Dimensions,_SignMode,InvDirModeRuntime> : public RaySign<_Element,_Dimensions,_SignMode>
-	{
-		typedef InvDirModeRuntime InvDirMode;
-		typedef ThisType Base;
-		typedef RayInvDir<Element,Dimensions,SignMode,InvDirMode> ThisType;
+		// RayInvDirModeRuntime
+		template<class _Options> struct RayInvDir<_Options,RayInvDirModeRuntime> : public RaySign<_Options,typename getOptionByTag<_Options,Tag_RaySignMode>::type>
+		{
+			typedef RayInvDirModeRuntime InvDirMode;
+			typedef RaySign<_Options,typename getOptionByTag<_Options,Tag_RaySignMode>::type> Base;
+			typedef RayInvDir<_Options,InvDirMode> ThisType;
 
-		template<class _RayBase> inline RayInvDir(const _RayBase& ray) : Base(ray)
+			template<class _RayBase> inline RayInvDir(const _RayBase& ray) : Base(ray)
+			{
+			}
+
+			inline RayInvDir() : Base()
+			{
+			}
+		
+			inline const typename Base::Vector_T invDirection() const 
+			{ 
+				typename Base::Vector_T result;
+				for(int i = 0; i < Base::Dimensions; ++i)
+					result[i] = Base::direction()[i].ReciprocalHighAccuracy();
+				return result;
+			}
+		};
+
+		// RayInvDirModePrecompute
+		template<class _Options> struct RayInvDir<_Options,RayInvDirModePrecompute> : public RaySign<_Options,typename getOptionByTag<_Options,Tag_RaySignMode>::type>
+		{
+			typedef RayInvDirModePrecompute InvDirMode;
+			typedef RaySign<_Options,typename getOptionByTag<_Options,Tag_RaySignMode>::type> Base;
+			typedef RayInvDir<_Options,InvDirMode> ThisType;
+
+			template<class _RayBase> inline RayInvDir(const _RayBase& ray) : Base(ray)
+			{
+				for(int i = 0; i < Base::Dimensions; ++i)
+					_invDirection[i] = Base::direction()[i].ReciprocalHighPrecision();
+			}
+
+			inline RayInvDir() : Base()
+			{
+			}
+
+			inline void setDirection(const typename Base::Vector_T& direction)
+			{
+				Base::setDirection(direction);
+
+				for(int i = 0; i < Base::Dimensions; ++i)
+					_invDirection[i] = Base::direction()[i].ReciprocalHighPrecision();
+			}
+
+			inline const typename Base::Vector_T& invDirection() const { return _invDirection; }
+		private:
+			typename Base::Vector_T		_invDirection;
+		};
+
+		//Signature
+		template<class _Options,class _LengthMode> struct RayLength;
+	
+		// RayLengthModeStored
+		template<class _Options> struct RayLength<_Options,RayLengthModeStored> : public RayInvDir<_Options,typename getOptionByTag<_Options,Tag_RayInvDirMode>::type>
+		{
+			typedef RayLengthModeStored LengthMode;
+			typedef RayInvDir<_Options,typename getOptionByTag<_Options,Tag_RayInvDirMode>::type> Base;
+			typedef RayLength<_Options,LengthMode> ThisType;
+
+			template<class _RayBase> inline RayLength(const _RayBase& ray) : Base(ray)
+			{
+				_length = ray.length();
+			}
+
+			inline RayLength() : Base()
+			{
+			}
+		
+			inline void setLength(const typename Base::Scalar_T& length)
+			{
+				_length = length;
+			}
+
+			inline const typename Base::Scalar_T& length() const 
+			{ 
+				return _length;
+			}
+		private:
+			typename Base::Scalar_T	_length;
+		};
+
+		// RayLengthModeNone
+		template<class _Options> struct RayLength<_Options,RayLengthModeNone> : public RayInvDir<_Options,typename getOptionByTag<_Options,Tag_RayInvDirMode>::type>
+		{
+			typedef RayLengthModeNone LengthMode;
+			typedef RayInvDir<_Options,typename getOptionByTag<_Options,Tag_RayInvDirMode>::type> Base;
+			typedef RayLength<_Options,LengthMode> ThisType;
+
+			template<class _RayBase> inline RayLength(const _RayBase& ray) : Base(ray)
+			{
+			}
+
+			inline RayLength() : Base()
+			{
+			}
+
+			inline void setLength(const typename Base::Scalar_T& length) const
+			{
+			}
+		
+			inline const typename Base::Scalar_T& length() const 
+			{ 
+				return 1.0f;
+			}
+		};
+	}
+
+	template<class _Options> struct Ray : public detail::RayLength<_Options,typename getOptionByTag<_Options,Tag_RayLengthMode>::type >
+	{
+		typedef detail::RayLength<_Options,typename getOptionByTag<_Options,Tag_RayLengthMode>::type > Base;
+		typedef Ray<_Options> ThisType;
+
+		template<class _RayBase> inline Ray(const _RayBase& ray) : Base(ray)
 		{
 		}
 		
-		inline const Vector_T invDirection() const 
-		{ 
-			Vector_T result;
-			for(int i = 0; i < Dimensions; ++i)
-				result[i] = direction()[i].ReciprocalHighAccuracy();
-			return result;
-		}
+		inline Ray() : Base()
+		{
+		}		
+	public:
+		EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 	};
-
-	template<class _Element,int _Dimensions,class _SignMode> struct RayInvDir<_Element,_Dimensions,_SignMode,InvDirModePrecompute> : public RaySign<_Element,_Dimensions,_SignMode>
-	{
-		typedef InvDirModeRuntime InvDirMode;
-		typedef ThisType Base;
-		typedef RayInvDir<Element,Dimensions,SignMode,InvDirMode> ThisType;
-
-		template<class _RayBase> inline RayInvDir(const _RayBase& ray) : Base(ray)
-		{
-			for(int i = 0; i < Dimensions; ++i)
-				_invDirection[i] = direction()[i].ReciprocalHighPrecision();
-		}
-		
-		inline RayInvDir(const ThisType& ray) : Base(ray)
-		{
-			for(int i = 0; i < Dimensions; ++i)
-				_invDirection[i] = ray.invDirection()[i];
-		}
-
-		inline const Vector_T& invDirection() const { return _invDirection; }
-	private:
-		Vector_T		_invDirection;
-	};
-
-	template<class _Element,int _Dimensions,class _SignMode, class _InvDirMode> struct RayAccel : public RayInvDir<_Element,_Dimensions,_SignMode,_InvDirMode>
-	{
-		template<class _RayBase> inline RayAccel(const _RayBase& ray) : RayInvDir<_Element,_Dimensions,_SignMode,_InvDirMode>(ray)
-		{
-		}
-		
-		inline RayAccel() : RayInvDir<_Element,_Dimensions,_SignMode,_InvDirMode>()
-		{
-		}
-	};
-
-	// A slope ray accel class... effectively useless because it uses way too much bandwidth
-	/*
-	template<int _Width> struct RayAccelBaseSlope : public RayAccelBase<_Width>
-	{
-		typedef typename Vector3v<_Width>::type Vector_T;
-		typedef SimdType<float,_Width> Scalar_T;
-		static const int Width = _Width;
-		typedef RayAccelBase<_Width> Base;
-
-		inline RayAccelBaseSlope(const std::array<Ray,_Width>& ray) : Base(ray)
-		{
-			//slopes
-			_s_yx = Base::direction().x() * Base::invDirection().y();
-			_s_xy = Base::direction().y() * Base::invDirection().x();
-			_s_zy = Base::direction().y() * Base::invDirection().z();
-			_s_yz = Base::direction().z() * Base::invDirection().y();
-			_s_xz = Base::direction().z() * Base::invDirection().x();
-			_s_zx = Base::direction().x() * Base::invDirection().z();
-
-			//precomp
-			_c_yx = origin().x() - _s_yx * Base::direction().y();
-			_c_xy = origin().y() - _s_xy * Base::direction().x();
-			_c_zx = origin().x() - _s_zx * Base::direction().z();
-			_c_xz = origin().z() - _s_xz * Base::direction().x();
-			_c_zy = origin().y() - _s_zy * Base::direction().z();
-			_c_yz = origin().z() - _s_yz * Base::direction().y();
-
-		}
-
-		Scalar_T							_s_yx,_s_xy,_s_zy,_s_yz,_s_xz,_s_zx;
-		Scalar_T							_c_yx,_c_xy,_c_zy,_c_yz,_c_xz,_c_zx;
-	};*/
 	
 }
 

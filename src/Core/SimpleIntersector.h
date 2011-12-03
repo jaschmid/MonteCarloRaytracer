@@ -27,40 +27,46 @@
 #include "RayData.h"
 #include "RayAABBIntersection.h"
 #include "RayTriangleIntersection.h"
+#include "IIntersector.h"
+#include "SceneReader.h"
+#include "Aligned.h"
 
 namespace Raytrace {
 
-template<class _SampleData,class _RayData,int _SimdWidth> struct SimpleIntersectorEngine;
-
-struct SimpleIntersector
+template<class _RayData,class _SceneReader,int _SimdWidth> struct SimpleIntersector : public IIntersector<_RayData,_SceneReader>
 {
-	template<class _SampleData,class _RayData> struct Engine
-	{
-		typedef SimpleIntersectorEngine<_SampleData,_RayData,4> type;
-	};
-
-	typedef DualRayData<> ExternalData;
-	typedef EngineMultiThreaded ThreadingMode;
-	typedef EngineIntersector EngineType;
-};
-
-template<class _SampleData,class _RayData,int _SimdWidth> struct SimpleIntersectorEngine
-{
-	typedef _SampleData SampleData;
 	typedef _RayData RayData;
-
-	typedef typename _RayData::RayIdType RayIdType;
+	typedef _SceneReader SceneReader;
 	static const int SimdWidth = _SimdWidth;
+
+	typedef typename RayData::RayType BaseRayType;
+	typedef typename RayData::PrimitiveType BasePrimitiveType;
 
 	typedef SimdType<int,SimdWidth>	Scalari_T;
 	typedef SimdType<float,SimdWidth>	Scalar_T;
 	typedef typename Vector2v<SimdWidth>::type Vector2_T;
 	typedef typename Vector3v<SimdWidth>::type Vector3_T;
 
-	typedef TriAccel<SimdWidth>		PrimitiveType;
+	typedef mpl::vector<
+				RaySignModePrecompute,
+				RayLengthModeNone,
+				RayInvDirModePrecompute,
+				RayScalarType<Scalar_T>,
+				RayDimensions<BaseRayType::Dimensions> > RayOptions;
+	typedef mpl::vector<
+				TriangleBaseModeBarycentricPlane,
+				TriangleScalarType<Scalar_T>,
+				TriangleDimensions<BasePrimitiveType::Dimensions>,
+				TriangleUserDataType<Scalari_T>	> PrimitiveOptions;
 
-	typedef typename RayData::AnyHitRay AnyHitRay;
-	typedef typename RayData::FirstHitRay FirstHitRay;
+	typedef mpl::vector< TriangleUserDataType<int>	> PrimitiveUserOptions;
+
+	typedef typename BaseRayType::adapt<RayOptions>::type		RayType;
+
+	typedef typename BasePrimitiveType::adapt<PrimitiveUserOptions>::type UserPrimitiveType;
+
+	typedef typename BaseRayType::adapt<RayOptions>::type		RayType;
+	typedef typename BasePrimitiveType::adapt<PrimitiveOptions>::type	PrimitiveType;
 	
 	template<class _RayType> struct RayTypeInfo
 	{
@@ -69,10 +75,10 @@ template<class _SampleData,class _RayData,int _SimdWidth> struct SimpleIntersect
 
 	template<> struct RayTypeInfo<AnyHitRay>
 	{
-		typedef RayAccel<SimdType<f32,SimdWidth>,3,SignModePrecompute,InvDirModePrecompute> type;
+		typedef typename SimpleIntersector::RayType type;
 		typedef typename Intersector<boost::mpl::vector< 
-				Raytrace::RayType<type>,
-				Raytrace::PrimitiveType<PrimitiveType>, 
+				Raytrace::RayType<typename SimpleIntersector::RayType>,
+				Raytrace::PrimitiveType<typename SimpleIntersector::PrimitiveType>, 
 				Raytrace::RayCount<1>, 
 				Raytrace::PrimitiveCount<1>,
 				Raytrace::RayModeConstant
@@ -81,25 +87,27 @@ template<class _SampleData,class _RayData,int _SimdWidth> struct SimpleIntersect
 	
 	template<> struct RayTypeInfo<FirstHitRay>
 	{
-		typedef RayAccel<SimdType<f32,SimdWidth>,3,SignModePrecompute,InvDirModePrecompute> type;
+		typedef typename SimpleIntersector::RayType type;
 		typedef typename Intersector<boost::mpl::vector< 
-				Raytrace::RayType<type>,
-				Raytrace::PrimitiveType<PrimitiveType>, 
+				Raytrace::RayType<typename SimpleIntersector::RayType>,
+				Raytrace::PrimitiveType<typename SimpleIntersector::PrimitiveType>, 
 				Raytrace::RayCount<1>, 
 				Raytrace::PrimitiveCount<1>,
 				Raytrace::RayModeUpdateMinimum
 			>>::type intersector;
 	};
 
-	inline SimpleIntersectorEngine(const SimpleIntersector& shader,_SampleData& sampleData,RayData& rayData,const SceneReader& r) : _rayData(rayData),_sampleData(sampleData)
+	
+	void InitializePrepareST(size_t numThreads,const SceneReader& scene,RayData& rayData) 
 	{
-		int num = r.getNumTriangles();
+		_rayData = &rayData;
+		int num = scene->getNumPrimitives();
 		if(num > 0)
 		{
 			_sceneData.resize( (num -1) / SimdWidth + 1);
 			for(int i = 0; i < (int)_sceneData.size(); ++i)
 			{
-				std::array<PrimitiveType::Minimum,SimdWidth> primitives;
+				std::array<UserPrimitiveType,SimdWidth> primitives;
 
 				for(int j = 0; j < SimdWidth; ++j)
 				{
@@ -107,106 +115,109 @@ template<class _SampleData,class _RayData,int _SimdWidth> struct SimpleIntersect
 					int index = i*SimdWidth + j;
 					if(index < num)
 					{
-						r.getTriangle(index,primitives[j],material);
-						primitives[j]._user = index + 1;
+						BasePrimitiveType base;
+						scene->getPrimitive(index,base,material);
+						primitives[j] = base;
+						primitives[j].setUser( index + 1 );
 					}
 					else
 					{
 						primitives[j].setPoint(0,Vector3(0.0f,0.0f,0.0f));
 						primitives[j].setPoint(1,Vector3(0.0f,0.0f,0.0f));
 						primitives[j].setPoint(2,Vector3(0.0f,0.0f,0.0f));
-						primitives[j]._user = index + 1;
+						primitives[j].setUser( index + 1 );
 					}
 				}
 
-				_sceneData[i] = PrimitiveType(primitives);
+				_sceneData[i] = PrimitiveType(ConstArrayWrapper<std::array<UserPrimitiveType,SimdWidth>>(primitives));
 			}
 		}
 	}
-	inline void prepare(int numThreads) 
+	void InitializeMT(size_t threadId) 
 	{
 	}
-	inline void threadEnter(int threadId) 
+	void InitializeCompleteST() 
 	{
-		doIntersections<typename RayData::AnyHitRay>(threadId);
-		doIntersections<typename RayData::FirstHitRay>(threadId);
 	}
+
+	void IntersectPrepareST() 
+	{
+	}
+	void IntersectMT(size_t threadId) 
+	{
+		doIntersections<AnyHitRay>(threadId);
+		doIntersections<FirstHitRay>(threadId);
+	}
+	void IntersectCompleteST() 
+	{
+	}
+	
 
 	template<class _RayType> void doIntersections(int threadId)
 	{
-		RayIdType count = 1;
-		RayIdType rayId = _rayData.getNextRays<_RayType>(threadId,count);
-		while(count)
+		auto it = _rayData->begin<_RayType>(threadId);
+		auto end = _rayData->end<_RayType>();
+		while(it != end)
 		{
-			Ray rayBase;
-			typename RayData::OutputIdType<_RayType>::type outputSample;
-			_rayData.getRayInfo<_RayType>(rayId,rayBase,outputSample);
-
-			processRay<_RayType>(threadId,rayBase,outputSample);
-
-			count = 1;
-			rayId = _rayData.getNextRays<_RayType>(threadId,count);
+			processRay<_RayType>(it);
+			++it;
 		}
-		_rayData.threadCompleteIntersecting<_RayType>(threadId,rayId);
 	}
-	
-	template<class _RayType> void processRay(int threadId,const Ray& ray,const typename RayData::OutputIdType<_RayType>::type& outputSample)
-	{
-		static_assert(false,"Unsupported Ray Type")
-	}
+		
+	template<class _RayType> void processRay(typename RayData::iterator<_RayType>& it);
 
-	template<> void processRay<typename RayData::AnyHitRay>(int threadId,const Ray& rayBase,const typename RayData::OutputIdType<typename RayData::AnyHitRay>::type& outputSample)
+	template<> void processRay<AnyHitRay>(typename RayData::iterator<AnyHitRay>& iterator)
 	{
-		typedef RayData::AnyHitRay RayType;
-		std::array<Ray,SimdWidth> rayArray;
-		std::array<Real,SimdWidth> tArray;
+		const BaseRayType& rayBase = iterator->ray;
+
+		std::array<BaseRayType,SimdWidth> rayArray;
 
 		for(int i = 0; i < SimdWidth; ++i)
-		{
 			rayArray[i] = rayBase;
-			tArray[i] = rayBase.length();
-			if(tArray[i] < .0f)
-				tArray[i] = std::numeric_limits<Real>::infinity();
-		}
 
-		RayTypeInfo<RayType>::type ray(rayArray);
-		RayTypeInfo<RayType>::type::Scalar_T tTemp(tArray);
+		RayTypeInfo<AnyHitRay>::type ray(rayArray);
 
-		bool found = false;
+		Scalar_T tTemp(rayBase.length() > .0f ? rayBase.length() : std::numeric_limits<Real>::infinity());
 		
+		bool found = false;
+
 		for(auto it = _sceneData.begin(); it != _sceneData.end() ; ++it)
-			if( RayTypeInfo<RayType>::intersector()(ray,*it,tTemp) )
+			if( RayTypeInfo<AnyHitRay>::intersector()(ray,*it,tTemp) )
 			{
-				_sampleData.setIntersectionResult(outputSample,true);
-				return;
+				found = true;
+				break;
 			}
 
-		_sampleData.setIntersectionResult(outputSample,false);
+		if(found)
+			(*iterator->resultOut) = 1;
+		else
+			(*iterator->resultOut) = 0;
 	}
 
-	template<> void processRay<typename RayData::FirstHitRay>(int threadId,const Ray& rayBase,const typename RayData::OutputIdType<typename RayData::FirstHitRay>::type& outputSample)
+	template<> void processRay<FirstHitRay>(typename RayData::iterator<FirstHitRay>& iterator)
 	{
-		typedef RayData::FirstHitRay RayType;
-		std::array<Ray,SimdWidth> rayArray;
+		const BaseRayType& rayBase = iterator->ray;
+
+		std::array<BaseRayType,SimdWidth> rayArray;
 
 		for(int i = 0; i < SimdWidth; ++i)
 			rayArray[i] = rayBase;
 
-		RayTypeInfo<RayType>::type ray(rayArray);
+		RayTypeInfo<FirstHitRay>::type ray(rayArray);
 
 		Scalar_T tTemp(rayBase.length() > .0f ? rayBase.length() : std::numeric_limits<Real>::infinity());
 		Vector2_T baryTemp;
-		Scalari_T triIds(-1);
+		Scalari_T triIds(0);
 
 		for(auto it = _sceneData.begin(); it != _sceneData.end() ; ++it)
-			RayTypeInfo<RayType>::intersector()(ray,*it,tTemp,baryTemp,triIds);
+			RayTypeInfo<FirstHitRay>::intersector()(ray,*it,tTemp,baryTemp,triIds);
 		
 		Real t = std::numeric_limits<Real>::infinity();
 		Vector2 bary;
 		int triId = 0;
 
 		for(int i = 0; i < SimdWidth; ++i)
-			if(triIds[i] != 0 && tTemp[i] < t)
+			if(triIds[i] != 0)
 			{
 				t = tTemp[i];
 				bary.x() = baryTemp.x()[i];
@@ -215,15 +226,25 @@ template<class _SampleData,class _RayData,int _SimdWidth> struct SimpleIntersect
 			}
 		
 		if(triId != 0)
-			_sampleData.setIntersectionResult(threadId,outputSample,triId - 1,bary,rayBase.direction());
+		{
+			if(iterator->absoluteIntersectionLocation)(*iterator->absoluteIntersectionLocation) = rayBase.origin()+ rayBase.direction()*t;
+			if(iterator->rayRelativeIntersectionLocation)(*iterator->rayRelativeIntersectionLocation) = t;
+			if(iterator->primitiveRelativeIntersectionLocation)(*iterator->primitiveRelativeIntersectionLocation) = bary;
+			if(iterator->primitiveIdentifier)(*iterator->primitiveIdentifier) = triId - 1;
+		}
 		else
-			_sampleData.setIntersectionResult(threadId,outputSample,-1,Vector2(0.0f,0.0f),rayBase.direction());
+		{
+			if(iterator->absoluteIntersectionLocation)(*iterator->absoluteIntersectionLocation) = Vector3(0.0f,0.0f,0.0f);
+			if(iterator->rayRelativeIntersectionLocation)(*iterator->rayRelativeIntersectionLocation) = -1.0f;
+			if(iterator->primitiveRelativeIntersectionLocation)(*iterator->primitiveRelativeIntersectionLocation) = Vector2(0.0f,0.0f);
+			if(iterator->primitiveIdentifier)(*iterator->primitiveIdentifier) = -1;
+		}
 	}
 
-	std::vector<PrimitiveType,Eigen::aligned_allocator<PrimitiveType>>	_sceneData;
+	std::vector<PrimitiveType,AlignedAllocator<PrimitiveType>>	_sceneData;
 
-	SampleData& _sampleData;
-	RayData& _rayData;
+	RayData* _rayData;
+
 };
 
 }

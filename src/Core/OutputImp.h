@@ -23,6 +23,8 @@
 #include "ObjectImp.h"
 #include "Engines.h"
 
+
+
 namespace Raytrace {
 
 	class OutputImp : public ObjectImp<OutputImp,IOutput>
@@ -34,27 +36,11 @@ namespace Raytrace {
 		{
 			const static PropertyMap set = boost::assign::map_list_of
 				("Enabled",Property(&GetEnabled,&SetEnabled))
-				("AdaptiveRendering",Property(&GetAdaptiveRendering,&SetAdaptiveRendering))
-				("MultisampleCount",Property(&GetMultisampleCount,&SetMultisampleCount))
-				("RenderingEngine",Property(&GetRenderingEngine,&SetRenderingEngine));
+				("Intersector",Property(&GetIntersector,&SetIntersector))
+				("Integrator",Property(&GetIntegrator,&SetIntegrator))
+				("Sampler",Property(&GetSampler,&SetSampler))
+				("Engine",Property(&GetEngine,&SetEngine));
 			return set;
-		}
-
-		static const std::array<String,NUM_ENGINES> GetRenderingEngines()
-		{
-			const std::array<String,NUM_ENGINES> engines = {
-#ifdef DUMMY_ENGINE
-				RenderingEngineDummy,
-#endif
-#ifdef SIMPLE_ENGINE
-				RenderingEngineSimple,
-#endif
-#ifdef FAST_ENGINE
-				RenderingEngineFast
-#endif
-			};
-
-			return engines;
 		}
 
 		Result SetOutputSurface(void* pData, int nDataSize, int xResolution, int yResolution, Format format);
@@ -63,41 +49,56 @@ namespace Raytrace {
 		Result UpdateOutput();
 		Result GetLastFrameInfo(std::string& info);
 
-		inline int GetNumRenderingEngines() const { return GetRenderingEngines().size(); }
-		inline String GetRenderingEngineName(int i) const { return GetRenderingEngines()[i]; }
-
 		//property Enabled/bool
 		inline void SetEnabled(const bool& enabled) { _enabled = enabled;}
 		inline bool GetEnabled() const {return _enabled;}
 
-		//property AdaptiveRendering/bool
-		inline void SetAdaptiveRendering(const bool& adaptive) { _adaptiveRendering = adaptive; }
-		inline bool GetAdaptiveRendering() const { return _adaptiveRendering; }
+		//property RenderingEngine/string
+		inline void SetEngine(const String& engine) { _engine = engine; }
+		inline String GetEngine() const { return _engine; }
 
-		//property MultisampleCount/int
-		inline void SetMultisampleCount(const int& count) { _multisampleCount = count; }
-		inline int GetMultisampleCount() const {return _multisampleCount; }
+		inline int GetNumEngines() const { return (int)DefaultEngine::getEngineNames().size(); }
+		inline String GetEngineName(int i) const { return DefaultEngine::getEngineNames()[i]; }
 
 		//property RenderingEngine/string
-		inline void SetRenderingEngine(const String& engine) { _engine = engine; }
-		inline String GetRenderingEngine() const { return _engine; }
+		inline void SetIntegrator(const String& integrator) { _integrator = integrator; }
+		inline String GetIntegrator() const { return _integrator; }
+
+		inline int GetNumIntegrators() const { return (int)DefaultEngine::getIntegratorNames().size(); }
+		inline String GetIntegratorName(int i) const { return DefaultEngine::getIntegratorNames()[i]; }
+
+		//property RenderingEngine/string
+		inline void SetIntersector(const String& intersector) { _intersector = intersector; }
+		inline String GetIntersector() const { return _intersector; }
+
+		inline int GetNumIntersectors() const { return (int)DefaultEngine::getIntersectorNames().size(); }
+		inline String GetIntersectorName(int i) const { return DefaultEngine::getIntersectorNames()[i]; }
+
+		//property RenderingEngine/string
+		inline void SetSampler(const String& sampler) { _sampler = sampler; }
+		inline String GetSampler() const { return _sampler; }
+
+		inline int GetNumSamplers() const { return (int)DefaultEngine::getSamplerNames().size(); }
+		inline String GetSamplerName(int i) const { return DefaultEngine::getSamplerNames()[i]; }
 
 	private:
 
 		typedef ObjectImp<OutputImp,IOutput> Base;
 
 		String	_engine;
+		String	_integrator;
+		String	_intersector;
+		String	_sampler;
 
 		bool	_enabled;
-		bool	_adaptiveRendering;
-		int		_multisampleCount;
 
+		IMAGE_FORMAT _outputFormat;
+		size_t	_xResOut;
+		size_t	_yResOut;
 		void*	_pDataOut;
 		size_t	_nDataOut;
 
-		boost::shared_ptr<RaytraceEngineBase>	_raytraceEngine;
-
-		GenericEngineSettings _engineSettings;
+		DefaultEngine::Engine	_raytraceEngine;
 
 		OutputImp(const String& name);
 

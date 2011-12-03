@@ -100,20 +100,21 @@ void RaytraceGUI::updatePreviewOutput()
 {
 	if(_outputImage.get() != nullptr &&_previewOutput.get() != nullptr && !_previewCompleted)
 	{
+		std::string text;
+		_previewOutput->GetLastFrameInfo(text);
+		_ui.statusBar->showMessage(QString( Raytrace::String( text ).c_str()));
+
 		Raytrace::Result res = _previewOutput->UpdateOutput();
-		if(res == Raytrace::Result::RenderingComplete)
+		/*if(res == Raytrace::Result::RenderingComplete)
 		{
-			std::string text;
 			_previewCompleted = true;
 			int time = -1;
-			_previewOutput->GetLastFrameInfo(text);
 
-			_ui.statusBar->showMessage(QString( Raytrace::String( text ).c_str()));
 		}
 		else if(res == Raytrace::Result::RenderingInProgress)
 			_ui.statusBar->showMessage(QString( Raytrace::String( Raytrace::String("Rendering In Progress") ).c_str()));
 		else if(res == Raytrace::Result::Failed)
-			_ui.statusBar->showMessage(QString( Raytrace::String( Raytrace::String("Rendering Not Ready Yet") ).c_str()));
+			_ui.statusBar->showMessage(QString( Raytrace::String( Raytrace::String("Rendering Not Ready Yet") ).c_str()));*/
 		
 		_ui.renderArea->setPixmap(nullptr);
 		_ui.renderArea->setPixmap(QPixmap::fromImage( *_outputImage ) );
@@ -121,15 +122,6 @@ void RaytraceGUI::updatePreviewOutput()
 
 	}
 
-}
-
-void RaytraceGUI::previewSetMultisamples(int count)
-{
-	if(_previewOutput.get() != nullptr)
-	{
-		_previewOutput->SetMultisampleCount(count);
-		_previewOutput->Refresh();
-	}
 }
 
 void		RaytraceGUI::previewRefresh()
@@ -158,8 +150,28 @@ void		RaytraceGUI::previewSetRenderingEngine(QString engine)
 {
 	if(_previewOutput.get() != nullptr)
 	{
-		_previewOutput->SetRenderingEngine(engine.toStdString());
-		previewRefresh();
+		_previewOutput->SetEngine(engine.toStdString());
+	}
+}
+void		RaytraceGUI::previewSetIntersector(QString engine)
+{
+	if(_previewOutput.get() != nullptr)
+	{
+		_previewOutput->SetIntersector(engine.toStdString());
+	}
+}
+void		RaytraceGUI::previewSetIntegrator(QString engine)
+{
+	if(_previewOutput.get() != nullptr)
+	{
+		_previewOutput->SetIntegrator(engine.toStdString());
+	}
+}
+void		RaytraceGUI::previewSetSampler(QString engine)
+{
+	if(_previewOutput.get() != nullptr)
+	{
+		_previewOutput->SetSampler(engine.toStdString());
 	}
 }
 
@@ -217,21 +229,35 @@ void RaytraceGUI::updatePreviewUI()
 {
 	if(_previewOutput.get() != nullptr)
 	{
-		_ui.previewMultisampleCount->setEnabled(true);
-		_ui.previewMultisampleCount->setValue(_previewOutput->GetMultisampleCount());
 		_ui.previewRefreshButton->setEnabled(true);
 		_ui.previewRenderingEngine->setEnabled(true);
 		_ui.previewRenderingEngine->clear();
-		for(int i = 0; i < _previewOutput->GetNumRenderingEngines(); ++i)
-			_ui.previewRenderingEngine->addItem( QString( _previewOutput->GetRenderingEngineName(i).c_str() ) );
+		_ui.previewIntersector->setEnabled(true);
+		_ui.previewIntersector->clear();
+		_ui.previewIntegrator->setEnabled(true);
+		_ui.previewIntegrator->clear();
+		_ui.previewSampler->setEnabled(true);
+		_ui.previewSampler->clear();
+		for(int i = 0; i < _previewOutput->GetNumEngines(); ++i)
+			_ui.previewRenderingEngine->addItem( QString( _previewOutput->GetEngineName(i).c_str() ) );
+		for(int i = 0; i < _previewOutput->GetNumIntersectors(); ++i)
+			_ui.previewIntersector->addItem( QString( _previewOutput->GetIntersectorName(i).c_str() ) );
+		for(int i = 0; i < _previewOutput->GetNumIntegrators(); ++i)
+			_ui.previewIntegrator->addItem( QString( _previewOutput->GetIntegratorName(i).c_str() ) );
+		for(int i = 0; i < _previewOutput->GetNumSamplers(); ++i)
+			_ui.previewSampler->addItem( QString( _previewOutput->GetSamplerName(i).c_str() ) );
 	}
 	else
 	{
-		_ui.previewMultisampleCount->setEnabled(false);
-		_ui.previewMultisampleCount->setValue(0);
 		_ui.previewRefreshButton->setEnabled(false);
 		_ui.previewRenderingEngine->setEnabled(false);
 		_ui.previewRenderingEngine->clear();
+		_ui.previewIntersector->setEnabled(false);
+		_ui.previewIntersector->clear();
+		_ui.previewIntegrator->setEnabled(false);
+		_ui.previewIntegrator->clear();
+		_ui.previewSampler->setEnabled(false);
+		_ui.previewSampler->clear();
 	}
 }
 

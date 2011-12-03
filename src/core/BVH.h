@@ -22,298 +22,53 @@
 
 #include "Triangle.h"
 #include "AABB.h"
+#include "BVHConstructor.h"
+#include "ArrayAdapter.h"
 
 #ifndef RAYTRACE_BVH_H_INCLUDED
 #define RAYTRACE_BVH_H_INCLUDED
 
 namespace Raytrace {
+	
 
-#ifdef _DEBUG
-	inline void RAY_ASSERT(bool val) { RAY_ASSERT(val); }
-#else
-	inline void RAY_ASSERT(bool val) {}
-#endif
-
-	struct DefaultLeafContainer
-	{
-		template<class _Contents,int _Size> struct data
-		{
-			typedef typename std::array<_Contents,_Size> type;
-		};
-	};
-
-	template<class _Leaf,int _NodeSize = 4,int _LeafSize = 4,class _LeafContainer = DefaultLeafContainer> struct BVH
+	template<class _Leaf = Triangle,class _Volume = AABB,int _LeafSize = 2,int _NodeSize = 2,class _LeafContainer = std::array<_Leaf,_LeafSize>,class _VolumeContainer = std::array<_Volume,_NodeSize>> struct BVH
 	{
 		static const int NodeSize = _NodeSize;
 		static const int LeafSize = _LeafSize;
 		
-		typedef AABB		Volume;
-		typedef typename _LeafContainer::data<_Leaf,_LeafSize>::type LeafElement;
+		typedef _Leaf													LeafItem;
+		typedef _Volume													VolumeItem;
+		
+		typedef up														EncodedElement;
+
+		typedef _VolumeContainer										VolumeElement;
+		typedef _LeafContainer											LeafElement;
+		typedef struct _TreeElement
+		{
+			template<class _Array> inline _TreeElement(const ConstArrayWrapper<_Array>& volumes) : _volumes(volumes) {}
+
+			VolumeElement							_volumes;
+			std::array<EncodedElement,NodeSize>		_children;
+		}	TreeElement;
+
+		
+		typedef BVHConstructor<LeafItem,VolumeItem,NodeSize,LeafSize>		Constructor;
 		
 
-		struct Constructor
-		{
-		public:
-			typedef typename BVH::LeafItem LeafItem;
-			typedef typename BVH::Volume Volume;
 
-			inline Constructor(const size_t binSize) : _binSize(binSize) 
-			{
-				_bins.resize( _binSize );
-			}
+		friend struct nodeIterator;
+		
+		/*
+		typedef u32 ChildNodeIndex;
+		static const size_t CHILD_NODE_INDEX_SIZE = 2; // TO DO, GENERIC
+		static const size_t CHILD_NODE_INDEX_MASK = (1 << CHILD_NODE_INDEX_SIZE) -1;
 
-			~Constructor(){}
+		typedef typename boost::uint_t<CHILD_NODE_INDEX_SIZE*NodeSize>::fast  OrderElement;
 
-			inline void addElement(const LeafItem& element,const Vector3& centroid,const Volume& volume)
-			{
-				ConstructionItem item;
-				item._item = element;
-				item._centroid = centroid;
-				item._volume = Volume(volume,centroid);
-				_items.push_back(item);
-			}
-			
-		private:
+		static const size_t NUM_ORDER_ELEMENTS = 8; //8 possible sign combinations
 
-			friend struct BVH;
+		typedef std::array<OrderElement,NUM_ORDER_ELEMENTS> OrderHolder;*/
 
-			void constructFinal()
-			{
-				if(_sortedItems.size() != 0)
-					return;
-				_sortedItems.resize(_items.size());
-
-				Volume rootVolume = Volume::Empty();
-				
-				for(auto it = _items.begin(); it != _items.end(); ++it)
-				{
-					rootVolume = Volume(rootVolume,it->_volume);
-					_sortedItems[it - _items.begin()] = &*it;
-				}
-
-
-				_rootNode._childItemBegin = 0;
-				_rootNode._childItemEnd = _sortedItems.size();
-				_rootNode._bound = rootVolume;
-				makeMultiNode(_rootNode);
-			}
-
-			struct ConstructionItem
-			{
-				LeafItem			_item;
-				Vector3				_centroid;
-				Volume				_volume;
-			};
-
-			struct Bin
-			{
-				size_t	_itemCount;
-				AABB	_bound;
-			};
-
-			struct Node
-			{
-				Node() : _bound(Volume::Empty()),_childItemBegin(0),_childItemEnd(0),_numChildNodes(0)
-				{
-					for(auto it = _childNodes.begin(); it != _childNodes.end(); ++it)
-						*it = -1;
-				}
-				Volume						_bound;
-				size_t						_childItemBegin;
-				size_t						_childItemEnd;
-				size_t						_numChildNodes;
-				std::array<size_t,NodeSize>	_childNodes;
-			};
-
-			void makeMultiNode(Node& multi)
-			{
-				if(!nodeWantsToSplit(multi))
-					return;
-
-				Node child(multi);
-
-				int childId = _nodes.size();
-				_nodes.push_back(child);
-
-				multi._childItemBegin = 0;
-				multi._childItemEnd = 0;
-				multi._numChildNodes = 1;
-				multi._childNodes[0] = childId;
-
-				while(multi._numChildNodes < NodeSize)
-				{
-					size_t splitChild = findSplitChild(multi);
-
-					if(splitChild == -1)
-						break;
-					else
-					{
-						multi._childNodes[multi._numChildNodes] = splitNode( _nodes[multi._childNodes[splitChild]] );
-						multi._numChildNodes++;
-					}
-				}
-
-				for(size_t i = 0; i < multi._numChildNodes; ++i)
-					makeMultiNode( _nodes[multi._childNodes[i]] );
-
-			}
-
-			inline size_t findSplitChild(const Node& parent) const
-			{
-				Real sah = -std::numeric_limits<Real>::infinity();
-				size_t index = -1;
-
-				for(size_t i = 0; i < parent._numChildNodes; ++i)
-				{
-					const Node& childNode = _nodes[ parent._childNodes[i] ];
-					if( nodeWantsToSplit( childNode ) )
-					{
-						Real sah2 = childNode._bound.SAH();
-						if(sah2 > sah)
-						{
-							sah = sah2;
-							index = i;
-						}
-					}
-				}
-				return index;
-			}
-
-			size_t splitNode(Node& node1)
-			{
-				size_t nodeId2 = _nodes.size();
-				_nodes.push_back(Node());
-
-				Node& node2 = _nodes[nodeId2];
-
-				size_t itemBegin = node1._childItemBegin;
-				size_t itemEnd = node1._childItemEnd;
-
-				Volume centroidVolume = Volume::Empty();
-
-				for(size_t i = itemBegin; i < itemEnd; ++i)
-					centroidVolume = Volume( centroidVolume, _sortedItems[i]->_centroid );
-				
-				node1._bound = Volume::Empty();
-				node1._childItemBegin = 0;
-				node1._childItemEnd = 0;
-
-				projectItemsToBins(itemBegin,itemEnd,centroidVolume);
-
-				Real sah = std::numeric_limits<Real>::infinity();
-				Volume bestLeft = Volume::Empty(),bestRight = Volume::Empty();
-				size_t split = -1;
-
-				for(size_t i = 1; i < _bins.size(); ++ i)
-				{
-					Volume left = Volume::Empty(),right = Volume::Empty();
-
-					for(size_t iLeft = 0; iLeft < i; ++ iLeft)
-						left = Volume(left,_bins[iLeft]._bound);
-					for(size_t iRight = i; iRight < _bins.size(); ++ iRight)
-						right = Volume(right,_bins[iRight]._bound);
-
-					if(left.isEmpty() || right.isEmpty())
-						continue;
-
-					if(left.SAH() + right.SAH() < sah)
-					{
-						sah = left.SAH() + right.SAH();
-						bestLeft = left;
-						bestRight = right;
-						split = i;
-					}
-				}
-
-				RAY_ASSERT(split != -1);
-
-				sortItems(node1,node2,bestLeft,bestRight,itemBegin,itemEnd);
-
-				return nodeId2;
-			}
-
-			inline void sortItems(Node& node1,Node& node2,const Volume& leftCentroid,const Volume& rightCentroid,size_t itemBegin, size_t itemEnd)
-			{
-				int iLeft = itemBegin, iRight = itemEnd - 1;
-
-				while(iLeft < iRight)
-				{
-					while(leftCentroid.contains( _sortedItems[iLeft]->_centroid ) && iLeft < iRight)
-					{
-						node1._bound = Volume(node1._bound,_sortedItems[iLeft]->_volume);
-						iLeft++;
-					}
-					
-					while(rightCentroid.contains( _sortedItems[iRight]->_centroid ) && iLeft < iRight)
-					{
-						node2._bound = Volume(node2._bound,_sortedItems[iRight]->_volume);
-						iRight--;
-					}
-
-					if(iLeft < iRight)
-					{
-						ConstructionItem* t = _sortedItems[iRight];
-						_sortedItems[iRight] = _sortedItems[iLeft];
-						_sortedItems[iLeft] = t;
-					}
-				}
-
-				node1._childItemBegin = itemBegin;
-				node1._childItemEnd = iLeft;
-				node2._childItemBegin = iLeft;
-				node2._childItemEnd = itemEnd;
-				node2._bound = Volume(node2._bound,_sortedItems[iLeft]->_volume);
-			}
-
-			static inline bool nodeWantsToSplit(const Node& node)
-			{
-				if(node._childItemEnd - node._childItemBegin > NodeSize )
-					return true;
-				else
-					return false;
-			}
-
-			inline size_t projectItemsToBins(size_t itemBegin,size_t itemEnd,const Volume& totalVolume)
-			{
-				static const Real EPSILON = .00001f;
-				//reset bins
-				for(auto it = _bins.begin(); it != _bins.end(); ++it)
-				{
-					it->_itemCount = 0;
-					it->_bound = Volume::Empty();
-				}
-
-				//find dominant axis
-				size_t dominant = 0;
-				Real dominantSize = totalVolume.max()[dominant] - totalVolume.min()[dominant];
-				for(size_t i = 1; i < 3; ++i)
-				{
-					Real size = totalVolume.max()[i] - totalVolume.min()[i];
-					if(size > dominantSize)
-					{
-						dominant = i;
-						dominantSize = size;
-					}
-				}
-
-				Real k = (Real)_binSize*(1.0f-EPSILON)/(dominantSize);
-
-				for(size_t i = itemBegin; i < itemEnd; ++i)
-				{
-					size_t binIndex = (size_t)(k*(_sortedItems[i]->_centroid[dominant] - totalVolume.min()[dominant]));
-					_bins[binIndex]._bound = Volume(_bins[binIndex]._bound, _sortedItems[i]->_centroid);
-					_bins[binIndex]._itemCount ++;
-				}
-				return dominant;
-			}
-
-			const size_t					_binSize;
-			Node							_rootNode;
-			std::deque<Node>				_nodes;
-			std::vector<Bin>				_bins;
-			std::vector<ConstructionItem*>	_sortedItems;
-			std::vector<ConstructionItem>	_items;
-		};
 
 		inline BVH(Constructor& init)
 		{
@@ -329,35 +84,47 @@ namespace Raytrace {
 				else
 					numLeafs ++;
 			}
-			_leaf.resize( numLeafs );
-			_node.resize( numNodes );
-			_volume.resize( numLeafs + numNodes );
 
-			size_t nLeaf = 0;
-			size_t nNode = 0;
+			_numUsed = 0;
+			_totalMem = numLeafs * sizeof(LeafElement) + numNodes * sizeof(TreeElement);
+			_memory = _aligned_malloc( _totalMem, 64);
 
-			_root = encodeConstructorNode( init._rootNode, init, nLeaf, nNode );
+			_root = encodeConstructorNodeBreadthFirst( init._rootNode, init );
 
-			RAY_ASSERT(nLeaf == _leaf.size());
-			RAY_ASSERT(nNode == _node.size());
 		}
 
 		inline ~BVH()
 		{
+			_aligned_free(_memory);
 		}
-
-		struct nodeIterator
+		/*
+		struct traverseOrder
 		{
-			inline nodeIterator(const nodeIterator& other) : _contents(other._contents),_bvh(other._bvh)
+			inline traverseOrder(const OrderElement& element) : _curr(element)
 			{
 			}
 
-			inline nodeIterator() : _data(nullptr,nullptr,0),_bvh(nullptr) {}
+			inline ChildNodeIndex getNext()
+			{
+				int res = _curr & CHILD_NODE_INDEX_MASK;
+				_curr >>= CHILD_NODE_INDEX_SIZE;
+				return res;
+			}
+
+			OrderElement								_curr;
+		};*/
+
+		struct nodeIterator
+		{
+			inline nodeIterator(const nodeIterator& other) : _encoded(other._encoded)
+			{
+			}
+
+			inline nodeIterator() : _encoded(BVH::INVALID_ELEMENT) {}
 
 			inline nodeIterator& operator = (const nodeIterator& other)
 			{
-				_data = other._data;
-				_bvh = other._bvh;
+				_encoded = other._encoded;
 				return *this;
 			}
 
@@ -368,107 +135,114 @@ namespace Raytrace {
 
 			inline bool valid() const
 			{
-				if(_data._data)
-					return true;
-				else
-					return false;
+				return BVH::isValid(_encoded);
 			}
 
-			inline const Volume& volume() const
+			inline const VolumeElement& volumes() const
 			{
-				RAY_ASSERT(valid());
-				return *_data._volume;
+				RAY_ASSERT( !isLeaf() );
+				return BVH::getNode(_encoded)._volumes;
+			}
+			/*
+			inline traverseOrder getTraverseOrder(int raydir)
+			{
+				return traverseOrder(BVH::getNode(_data)._childOrder[raydir]);
+			}*/
+
+			inline bool isLeaf() const
+			{
+				return BVH::isLeaf(_encoded);
 			}
 
-			inline bool leaf() const
+			inline const LeafElement& leaf() const
 			{
-				return _data._leafSize > 0;
+				RAY_ASSERT( isLeaf() );
+				return BVH::getLeaf(_encoded);
 			}
 
-			inline const LeafElement* leaf(int& size) const
+			inline nodeIterator node(/*ChildNodeIndex*/int index) const
 			{
-				size = _data._leafSize;
-				if(size)
-					return ((const LeafElement*)_data._data);
-				else
-					return nullptr;
+				RAY_ASSERT( index < NodeSize );
+				RAY_ASSERT( !isLeaf() );
+				//return nodeIterator(((const TreeElement*)_data)->_children[index]);
+				return nodeIterator(BVH::getNode(_encoded)._children[index]);
 			}
 
-			inline nodeIterator node(int index) const
+			inline void prefetch() const
 			{
-				if(_data._leafSize)
-					return nodeIterator();
-				else
-					return nodeIterator(*_bvh,(*((TreeElement*)_data._data))[index]);
+				_mm_prefetch( (char*)( &BVH::getNode(_encoded) ), _MM_HINT_T0 );
+				//_mm_prefetch( (char*)( &BVH::getNode(_encoded) ) +64, _MM_HINT_T0 );
+			}
+
+			inline void prefetchChild(int index) const
+			{
+				_mm_prefetch( (char*)( &BVH::getNode(BVH::getNode(_encoded)._children[index]) ), _MM_HINT_T0 );
 			}
 
 		private:
-			typedef typename BVH::encodedElement encodedElement;
-			typedef typename BVH::decodedElement decodedElement;
+			typedef typename BVH::EncodedElement EncodedElement;
 
 
 			friend struct BVH;
 
-			inline nodeIterator(const BVH& bvh,const encodedElement& element) : _data( bvh.decodeElement( element) ), _bvh(&bvh) {}
+			inline nodeIterator(const EncodedElement& element) : _encoded(element)
+			{
+			}
 
-			decodedElement		_data;
-			const BVH*			_bvh;
+			EncodedElement	_encoded;
+			/*
+			i32				_leaf;
+			const void*		_data;
+			*/
 		};
 		
 		inline nodeIterator root() const
 		{
-			return nodeIterator(*this,_root);
+			return nodeIterator(_root);
 		}
 
 	private:
+		static const EncodedElement LEAF_MASK = 0x00000001;
+		static const EncodedElement INVALID_ELEMENT = 0;
 		
-		typedef u32														encodedElement;
-		typedef std::array<encodedElement,NodeSize>						TreeElement;
-		typedef _Leaf													LeafItem;
-
-		typedef struct _decodedElement
+		static inline bool isValid(EncodedElement index)
 		{
-			inline _decodedElement(const Volume* volume,const void* data,int leafSize) :_volume(volume),_data(data),_leafSize(leafSize) {}
-
-			const Volume*	_volume;
-			const void*		_data;
-			int				_leafSize;
-		} decodedElement;
-
-
-		friend struct nodeIterator;
-		static const int IndexOffset = 8;
-		static const int LeafSizeMask = (1<<IndexOffset) -1;
-		static const encodedElement EmptyElement = -1;
-
-		inline decodedElement decodeElement(const encodedElement& index) const
-		{
-			if(index == EmptyElement)
-				return decodedElement(0,0,0);
-			int leafSize = index & LeafSizeMask;
-			int realIndex = index >> IndexOffset;
-			const Volume* volume = &_volume[leafSize?realIndex+_node.size():realIndex];
-			const void* data = (leafSize>0)?((const void*)&(_leaf[realIndex])):((const void*)&(_node[realIndex]));
-			return decodedElement(volume,data,leafSize);
+			return index != INVALID_ELEMENT;
 		}
 
-		inline encodedElement encodeLeaf(u32 size,u32 index) const
+		static inline bool isLeaf(EncodedElement index)
 		{
-			RAY_ASSERT(size != 0);
-			RAY_ASSERT(index < _leaf.size());
-			RAY_ASSERT(size <= LeafSize);
-			return (encodedElement)(size | (index << IndexOffset));
+			return (index & LEAF_MASK) != 0;
 		}
 
-		inline encodedElement encodeNode(u32 index) const
+		static inline const void* getData(EncodedElement index)
 		{
-			RAY_ASSERT(index < _node.size());
-			return (encodedElement)(index << IndexOffset);
+			return (const void*)(index & (~LEAF_MASK));
+		}
+		
+		static inline const TreeElement& getNode(EncodedElement index)
+		{
+			return *(const TreeElement*)(index);
 		}
 
-		inline encodedElement encodeEmpty() const
+		static inline const LeafElement& getLeaf(EncodedElement index)
 		{
-			return (encodedElement)EmptyElement;
+			return *(const LeafElement*)(index & (~LEAF_MASK));
+		}
+
+		static inline EncodedElement encodeLeaf(void* element)
+		{
+			return ((up)element) | LEAF_MASK;
+		}
+
+		static inline EncodedElement encodeNode(void* element)
+		{
+			return ((up)element);
+		}
+
+		static inline EncodedElement encodeEmpty()
+		{
+			return (EncodedElement)INVALID_ELEMENT;
 		}
 
 		/*
@@ -479,37 +253,136 @@ namespace Raytrace {
 				std::array<size_t,NodeSize>	_childNodes;
 		*/
 
-		inline encodedElement encodeConstructorNode(const typename Constructor::Node& node,const Constructor& constructor,size_t& iLeaf,size_t& iNode)
+		inline EncodedElement encodeConstructorNodeBreadthFirst(const typename Constructor::Node& root,const Constructor& constructor)
+		{
+			typedef std::pair<const typename Constructor::Node*,EncodedElement*> tempNode;
+			std::deque<tempNode> nodeStack;
+			nodeStack.push_back(tempNode(&root,nullptr));
+			EncodedElement result;
+
+			while(!nodeStack.empty())
+			{
+				const typename Constructor::Node& node = *nodeStack.front().first;
+				EncodedElement* parent = nodeStack.front().second;
+				nodeStack.pop_front();
+
+				
+				if(node._numChildNodes)
+				{
+					//node
+					TreeElement* element = (TreeElement*)getMemory(sizeof(TreeElement));
+
+					std::array<VolumeItem,NodeSize> subvolumes;
+
+					for(size_t i = 0; i < node._numChildNodes; ++i)
+						subvolumes[i] = constructor._nodes[ node._childNodes[i] ]._bound;
+					for(size_t i = node._numChildNodes; i < NodeSize; ++i)
+						subvolumes[i] = VolumeItem::Empty();
+
+					new (element) TreeElement( ConstArrayWrapper<std::array<VolumeItem,NodeSize>>(subvolumes) );
+						
+					for(size_t i = 0; i < node._numChildNodes; ++i)
+						nodeStack.push_back(tempNode(&constructor._nodes[ node._childNodes[i] ],&element->_children[i]));
+					for(size_t i = node._numChildNodes; i < NodeSize; ++i)
+						element->_children[i] = encodeEmpty();
+
+					if(parent)
+						*parent = encodeNode(element);
+					else
+						result = encodeNode(element);
+				}
+				else
+				{
+					//leaf
+					LeafElement* element = (LeafElement*)getMemory(sizeof(LeafElement));
+
+					std::array<LeafItem,LeafSize> leafs;
+
+					for(size_t i = 0; i < node._childItemEnd-node._childItemBegin; ++i)
+						leafs[i] = constructor._sortedItems[i+node._childItemBegin]->_item;
+					for(size_t i = node._childItemEnd-node._childItemBegin; i < LeafSize; ++i)
+						leafs[i] = LeafItem::Empty();
+
+					new (element) LeafElement( ConstArrayWrapper<std::array<LeafItem,LeafSize>>(leafs) );
+
+					if(parent)
+						*parent = encodeLeaf(element);
+					else
+						result = encodeLeaf(element);
+				}
+			}
+			return result;
+		}
+
+		inline EncodedElement encodeConstructorNodeDepthFirst(const typename Constructor::Node& root,const Constructor& constructor)
 		{
 			if(node._numChildNodes)
 			{
 				//node
-				size_t write = iNode;
-				++iNode;
+				TreeElement* element = (TreeElement*)getMemory(sizeof(TreeElement));
+				
+				std::array<VolumeItem,NodeSize> subvolumes;
+
 				for(size_t i = 0; i < node._numChildNodes; ++i)
-					_node[write][i] = encodeConstructorNode( constructor._nodes[ node._childNodes[i] ], constructor, iLeaf, iNode);
+					subvolumes[i] = constructor._nodes[ node._childNodes[i] ]._bound;
 				for(size_t i = node._numChildNodes; i < NodeSize; ++i)
-					_node[write][i] = encodeEmpty();
-				_volume[write] = node._bound;
-				return encodeNode(write);
+					subvolumes[i] = VolumeItem::Empty()
+
+				new (element) TreeElement(subvolumes);
+						
+				for(size_t i = 0; i < node._numChildNodes; ++i)
+					element->_children[i] = encodeConstructorNode( constructor._nodes[ node._childNodes[i] ], constructor);
+				for(size_t i = node._numChildNodes; i < NodeSize; ++i)
+					element->_children[i] = encodeEmpty();
+				
+				//generate traverse order
+				/*
+				for(int i = 0; i < NUM_ORDER_ELEMENTS; ++i)
+				{
+					std::array<int,NodeSize> order = {0,1,2,3};
+					element->_childOrder[i] = 0;
+
+					for(int j = 0; j < NodeSize; ++j)
+						element->_childOrder[i] |= order[j] << (CHILD_NODE_INDEX_SIZE * j);
+				}*/
+
+				return encodeNode(element);
 			}
 			else
 			{
 				//leaf
-				size_t write = iLeaf;
-				++iLeaf;
-				for(size_t i = node._childItemBegin; i < node._childItemEnd; ++i)
-					_leaf[write][i - node._childItemBegin] = constructor._sortedItems[i]->_item;
-				_volume[write + _node.size()] = node._bound;
-				return encodeLeaf( node._childItemEnd - node._childItemBegin, write);
+				LeafElement* element = (LeafElement*)getMemory(sizeof(LeafElement));
+				
+				std::array<LeafItem,LeafSize> leafs;
+
+				for(size_t i = 0; i < node._childItemEnd-node._childItemBegin; ++i)
+					leafs[i] = constructor._sortedItems[i+node._childItemBegin]->_item;
+				for(size_t i = node._childItemEnd-node._childItemBegin; i < LeafSize; ++i)
+					leafs[i] = LeafItem::Empty();
+				
+				new (element) LeafElement(leafs);
+
+				return encodeLeaf(element);
 			}
 		}
 
+		inline void* getMemory(up size)
+		{
+			void* result = &((u8*)_memory)[_numUsed];
+			_numUsed += size;
+			assert(_numUsed <= _totalMem);
+			return result;
+		}
+
 		// this is actually the only data we need at runtime
-		encodedElement					_root;
-		std::vector<Volume>				_volume; // volumes list nodes first then leafs
-		std::vector<LeafElement>		_leaf;
-		std::vector<TreeElement>		_node;
+		EncodedElement					_root;
+		up								_numUsed;
+		up								_totalMem;
+		void*							_memory;
+
+		/*
+		std::vector<LeafElement,AlignedAllocator<LeafElement>>		_leaf;
+		std::vector<TreeElement,AlignedAllocator<TreeElement>>		_node;*/
 	};
 
 }

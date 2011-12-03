@@ -38,7 +38,7 @@ struct Tag_RayAABBIntersectionMethod
 
 struct RayAABBIntersectionMethodWilliams 
 {
-	typedef Tag_RayAABBIntersectionMethod optionsTag;
+	typedef Tag_RayAABBIntersectionMethod Tag;
 	static const bool optionsDefined = true;
 };
 

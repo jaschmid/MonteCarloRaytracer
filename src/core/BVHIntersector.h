@@ -20,147 +20,502 @@
 #define RAYTRACE_BVH_INTERSECTOR_GUARD
 
 #include <RaytraceCommon.h>
+#include <queue>
 #include "Ray.h"
-#include "EngineBase.h"
 #include "ConcurrentStorage.h"
 #include "MathHelper.h"
 #include "RayData.h"
 #include "BVH.h"
+#include "RayAABBIntersection.h"
+#include "RayTriangleIntersection.h"
+#include "IIntersector.h"
+#include "SceneReader.h"
+#include "static_vector.h"
 
 namespace Raytrace {
-
-template<class _SampleData,class _RayData> struct BVHIntersectorEngine;
-
-struct BVHIntersector
+	
+template<class _RayData,class _SceneReader,int _SimdWidth,int _NodeArraySize,int _LeafArraySize> struct BVHIntersector : public IIntersector<_RayData,_SceneReader>
 {
-	template<class _SampleData,class _RayData> struct Engine
+	typedef _RayData RayData;
+	typedef _SceneReader SceneReader;
+
+	static const size_t NodeArraySize = _NodeArraySize;
+	static const size_t LeafArraySize = _LeafArraySize;
+	static const size_t SimdWidth = _SimdWidth;
+	static const size_t NodeWidth = SimdWidth*NodeArraySize;
+	static const size_t LeafWidth = SimdWidth*LeafArraySize;
+
+	typedef typename RayData::RayType BaseRayType;
+	typedef typename RayData::PrimitiveType BasePrimitiveType;
+	typedef AABB	BaseVolumeType;
+
+	typedef SimdType<int,SimdWidth>	Scalari_T;
+	typedef SimdType<float,SimdWidth>	Scalar_T;
+	typedef typename Vector2v<SimdWidth>::type Vector2_T;
+	typedef typename Vector3v<SimdWidth>::type Vector3_T;
+
+	typedef mpl::vector<
+				RaySignModePrecompute,
+				RayLengthModeNone,
+				RayInvDirModePrecompute,
+				RayScalarType<Scalar_T>,
+				RayDimensions<BaseRayType::Dimensions> > RayOptions;
+	typedef mpl::vector<
+				TriangleBaseModeBarycentricPlane,
+				TriangleScalarType<Scalar_T>,
+				TriangleDimensions<BasePrimitiveType::Dimensions>,
+				TriangleUserDataType<Scalari_T>	> PrimitiveOptions;
+
+	typedef mpl::vector< TriangleUserDataType<int>	> PrimitiveUserOptions;
+
+	typedef typename BaseRayType::adapt<RayOptions>::type		RayType;
+
+	typedef typename BasePrimitiveType::adapt<PrimitiveUserOptions>::type UserPrimitiveType;
+
+	typedef typename BaseRayType::adapt<RayOptions>::type		RayType;
+	typedef typename BasePrimitiveType::adapt<PrimitiveOptions>::type	PrimitiveType;
+	typedef AABBAccel<SimdWidth>	VolumeType;
+	
+	template<class _RayType> struct RayTypeInfo
 	{
-		typedef BVHIntersectorEngine<_SampleData,_RayData> type;
+
 	};
-	typedef SimpleRayData ExternalData;
-	typedef EngineMultiThreaded ThreadingMode;
-	typedef EngineIntersector EngineType;
-};
 
-template<class _SampleData,class _RayData> struct BVHIntersectorEngine
-{
-	struct TriangleElement
+	template<> struct RayTypeInfo<AnyHitRay>
 	{
-		TriAccel	_triangle;
+		typedef typename BVHIntersector::RayType type;
+		typedef typename Intersector<boost::mpl::vector< 
+				Raytrace::RayType<type>,
+				Raytrace::PrimitiveType<VolumeType>, 
+				Raytrace::RayCount<1>, 
+				Raytrace::PrimitiveCount<NodeArraySize>,
+				Raytrace::RayModeConstant
+			>>::type intersector_volume;
+		typedef typename Intersector<boost::mpl::vector< 
+				Raytrace::RayType<type>,
+				Raytrace::PrimitiveType<PrimitiveType>, 
+				Raytrace::RayCount<1>, 
+				Raytrace::PrimitiveCount<LeafArraySize>,
+				Raytrace::RayModeConstant
+			>>::type intersector_primitive;
 	};
 	
-	typedef BVH<TriangleElement> BVHType;
-	typedef _SampleData SampleData;
-	typedef _RayData RayData;
-
-	inline BVHIntersectorEngine(const BVHIntersector& shader,_SampleData& sampleData,RayData& rayData,const SceneReader& r) : _rayData(rayData),_sampleData(sampleData)
+	template<> struct RayTypeInfo<FirstHitRay>
 	{
-		BVHType::Constructor constructor(16);
+		typedef typename BVHIntersector::RayType type;
+		typedef typename Intersector<boost::mpl::vector< 
+				Raytrace::RayType<type>,
+				Raytrace::PrimitiveType<VolumeType>, 
+				Raytrace::RayCount<1>, 
+				Raytrace::PrimitiveCount<NodeArraySize>,
+				Raytrace::RayModeUpdateMinimum
+			>>::type intersector_volume;
+		typedef typename Intersector<boost::mpl::vector< 
+				Raytrace::RayType<type>,
+				Raytrace::PrimitiveType<PrimitiveType>, 
+				Raytrace::RayCount<1>, 
+				Raytrace::PrimitiveCount<LeafArraySize>,
+				Raytrace::RayModeUpdateMinimum
+			>>::type intersector_primitive;
+	};
+	
 
-		int num = r.getNumTriangles();
-		for(int i = 0; i< num; ++i)
+	typedef ContainerMultiplier<UserPrimitiveType,PrimitiveType,SimdWidth,LeafArraySize> PrimitiveContainer;
+	typedef ContainerMultiplier<typename VolumeType::Minimum,VolumeType,SimdWidth,NodeArraySize> VolumeContainer;
+
+	typedef BVH<UserPrimitiveType,typename VolumeType::Minimum,LeafWidth,NodeWidth,PrimitiveContainer,VolumeContainer> BVHType;
+	
+	template<int _MaxStackSize> struct ActiveStack
+	{
+		typedef typename BVHType::nodeIterator Node;
+		static const size_t MaxStackSize = _MaxStackSize;
+
+		ActiveStack()
 		{
-			Triangle tri;
-			int material;
-			r.getTriangle(i,tri,material);
-
-			AABB volume(tri);
-
-			Vector3 centroid = (tri.point(0) + tri.point(1) + tri.point(2))/3.0f;
-
-			TriangleElement item;
-			item._triangle = TriAccel(tri,i,material);
-			constructor.addElement( item, centroid, volume );
 		}
 
-		_sceneData.reset( new BVHType(constructor) );
-	}
-	inline void prepare(int numThreads) 
-	{
-	}
-	inline void threadEnter(int threadId) 
-	{
-		int count = 1;
-		int rayId = _rayData.getNextRays(threadId,count);
-		while(count)
+		inline Node getLowest()
 		{
-			Ray ray;
-			_rayData.getRayInfo(rayId,ray);
-			int triId = -1; 
-			Real t = ray.length();
-			if(t < .0f)
-				t = std::numeric_limits<Real>::infinity();
-			Vector2 bary;
-			processNode(ray, _sceneData->root() , triId, t, bary);
-
-			/*
-
-			float t= 1000.0f,tTemp = 1000.0f;
-			Vector2 bary,baryTemp;
-			int triId = -1;
-
-			for(auto it = _sceneData.begin(); it != _sceneData.end() ; ++it)
-				if(Intersect(ray,it->_triangle,tTemp,baryTemp) && (triId == -1 || tTemp < t) )
-				{
-					t = tTemp;
-					bary = baryTemp;
-					triId = it->_triangle._user1;
-				}*/
-
-			if(triId != -1)
-				_sampleData.pushSample(threadId,rayId,triId,bary);
-			else
-				_sampleData.pushSample(threadId,rayId,-1,Vector2(0.0f,0.0f));
-				
-			count = 1;
-			rayId = _rayData.getNextRays(threadId,count);
+			Node result = _stack.back().node();
+			_stack.pop_back();
+	//		_stack.back().node().prefetch();
+			return result;
 		}
-		_rayData.threadCompleteIntersecting(threadId,rayId);
-	}
 
-	static void processNode(const RayAccel& ray,const typename BVHType::nodeIterator& it,int& triId,Real& t,Vector2& bary)
-	{
-		if(it.leaf())
+		inline void compact(f32 v)
 		{
-			Real tTemp = t;
-			Vector2 baryTemp = bary;
+			u32 pos = 0;
+			for(; pos < _stack.size();++pos)
+				if(_stack[pos].t() < v)
+					break;
 
-			int size;
-			const BVHType::LeafElement* leaf = it.leaf(size);
-
-			for(int i = 0; i < size; ++ i)
-				if( Intersect(ray,(*leaf)[i]._triangle,tTemp,baryTemp) && tTemp < t)
-				{
-					t = tTemp;
-					triId = (*leaf)[i]._triangle._user1;
-					bary = baryTemp;
-				}
-		}
-		else
-		{
-			std::array<bool,BVHType::NodeSize> iChild;
-			std::array<Real,BVHType::NodeSize> tChild;
-			std::array<BVHType::nodeIterator,BVHType::NodeSize> child;
-			size_t num;
-			for(num = 0; num < BVHType::NodeSize; ++num)
+			if(pos != 0)
 			{
-				if( (child[num] = it.node(num)).valid() )
-					iChild[num] = Intersect( ray, child[num].volume(), tChild[num]);
+				for(u32 i = 0; i < _stack.size() - pos; ++i)
+					_stack[i] = _stack[i+pos];
+				_stack.resize(_stack.size()-pos);
+			}
+		}
+
+		inline void push(Node node,f32 t)
+		{
+			//bubble sort push
+			element curr(node,t);
+			u32 pos = (u32)_stack.size();
+			_stack.push_back(curr);
+
+			for(; pos > 0;--pos)
+			{
+				if(_stack[pos-1] < _stack[pos])
+				{
+					element t = _stack[pos];
+					_stack[pos] = _stack[pos-1];
+					_stack[pos-1] = t;
+				}
+					//std::swap<element>(_stack[pos],_stack[pos-1]);
 				else
 					break;
 			}
+		}
 
-			for(size_t i = 0; i < num; ++i)
-				if(iChild[i] && tChild[i] < t)
-					processNode( ray, child[i], triId, t, bary);
+		inline void conditional_push(bool condition,Node node,f32 t)
+		{
+			if(condition)
+				_stack.push_back(element(node,t));
+
+			//_stack.conditional_push_back(condition,element(node,t));
+		}
+
+		bool empty() const
+		{
+			return _stack.empty();
+		}
+
+		
+		struct element
+		{
+			inline element(Node n,f32 t)
+			{
+				_t = t;
+				_n = n;
+			}
+			inline element() {}
+
+			inline const Node& node()
+			{
+				return _n;
+			}
+
+			inline f32& t()
+			{
+				return _t;
+			}
+			
+			inline const f32& t() const
+			{
+				return _t;
+			}
+
+			inline bool operator < (const element& other) const
+			{
+				return t() < other.t();
+			}
+
+			struct
+			{
+				f32 _t;
+				Node _n;
+			};
+		};
+
+
+		static_vector<element,MaxStackSize>	_stack;
+	};
+	
+	void InitializePrepareST(size_t numThreads,const SceneReader& scene,RayData& rayData) 
+	{
+		BVHType::Constructor constructor(64);
+
+		int num = scene->getNumPrimitives();
+		for(int i = 0; i< num; ++i)
+		{
+			BasePrimitiveType tri;
+			int material;
+			scene->getPrimitive(i,tri,material);
+			
+			BaseVolumeType volume(tri);
+
+			Vector3 centroid = (tri.point(0) + tri.point(1) + tri.point(2))/3.0f;
+			UserPrimitiveType triUser(tri);
+			triUser.setUser( i + 1 );
+			constructor.addElement( triUser, centroid, volume );
+		}
+
+		_sceneData.reset( new BVHType(constructor) );
+
+		_rayData = &rayData;
+	}
+	void InitializeMT(size_t threadId) 
+	{
+	}
+	void InitializeCompleteST() 
+	{
+	}
+
+	void IntersectPrepareST() 
+	{
+	}
+	void IntersectMT(size_t threadId) 
+	{
+		unsigned int prevCSR = _mm_getcsr();
+		_mm_setcsr(0xffc0);
+
+		doIntersections<AnyHitRay>(threadId);
+		doIntersections<FirstHitRay>(threadId);
+
+		_mm_setcsr(prevCSR);
+	}
+	void IntersectCompleteST() 
+	{
+	}
+	
+	template<class _RayType> void doIntersections(int threadId)
+	{
+		auto it = _rayData->begin<_RayType>(threadId);
+		auto end = _rayData->end<_RayType>();
+		while(it != end)
+		{
+			processRay<_RayType>(it);
+			++it;
 		}
 	}
+
+	template<class _RayType> void processRay(typename RayData::iterator<_RayType>& it);
+
+
+	template<> void processRay<AnyHitRay>(typename RayData::iterator<AnyHitRay>& iterator)
+	{
+		const BaseRayType&									rayBase = iterator->ray;
+		static_vector<typename BVHType::nodeIterator,128 >	stack;
+		std::array<BaseRayType,SimdWidth>					rayArray;
+		bool												found = false;
+
+		for(int i = 0; i < SimdWidth; ++i)
+			rayArray[i] = rayBase;
+
+		RayTypeInfo<AnyHitRay>::type ray(rayArray);
+
+		Scalar_T tTemp(rayBase.length() > .0f ? rayBase.length() : std::numeric_limits<Real>::infinity());
+
+		stack.push_back(_sceneData->root());
+
+		while(!stack.empty())
+		{
+			BVHType::nodeIterator node = stack.back();
+			stack.pop_back();
+
+			if(node.isLeaf())
+			{
+				if(RayTypeInfo<AnyHitRay>::intersector_primitive()(ray, node.leaf(), tTemp))
+				{
+					found = true;
+					break;
+				}
+			}
+			else
+			{
+				std::array< RayTypeInfo<AnyHitRay>::intersector_volume::BooleanMask ,NodeArraySize> resultMask;
+				
+				RayTypeInfo<AnyHitRay>::intersector_volume()(ray, node.volumes(), tTemp,resultMask);
+
+				for(size_t j = 0; j < NodeArraySize; ++j)
+					if(resultMask[j])
+					{
+						for(size_t i = 0; i < SimdWidth; ++i)
+						{
+							//node.prefetchChild(j*SimdWidth+i);
+							stack.conditional_push_back( (resultMask[j] >> i) & 1, node.node(j*SimdWidth+i));
+						}
+					}
+
+			}
+		}
+
+		if(found)
+			(*iterator->resultOut) = 1;
+		else
+			(*iterator->resultOut) = 0;
+	}
+	
+	template<> void processRay<FirstHitRay>(typename RayData::iterator<FirstHitRay>& iterator)
+	{
+		const BaseRayType& rayBase = iterator->ray;
+		ActiveStack<128> stack;
+
+		std::array<BaseRayType,SimdWidth> rayArray;
+
+		for(int i = 0; i < SimdWidth; ++i)
+			rayArray[i] = rayBase;
+
+		RayTypeInfo<FirstHitRay>::type ray(rayArray);
+
+		Scalar_T tTemp(rayBase.length() > .0f ? rayBase.length() : std::numeric_limits<Real>::infinity());
+		Vector2_T baryTemp;
+		Scalari_T triIds(0);
+		
+		stack.push(_sceneData->root(),0.0f);
+		while(!stack.empty())
+		{
+			BVHType::nodeIterator node = stack.getLowest();
+			if(node.isLeaf())
+			{
+				bool found = false;
+
+				if(RayTypeInfo<FirstHitRay>::intersector_primitive()(ray, node.leaf(), tTemp, baryTemp,triIds))
+					found = true;
+
+				if(found)
+					stack.compact(tTemp[0]);
+			}
+			else
+			{
+
+				std::array<Scalar_T,NodeArraySize> tTempArr;
+				std::array< RayTypeInfo<FirstHitRay>::intersector_volume::BooleanMask ,NodeArraySize> resultMask;
+				for(int i = 0; i < NodeArraySize; ++i)
+					tTempArr[i] = tTemp;
+
+				
+				RayTypeInfo<FirstHitRay>::intersector_volume()(ray, node.volumes(), tTempArr, resultMask);
+				
+				for(size_t j = 0; j < NodeArraySize; ++j)
+					if(resultMask[j])
+					{
+						for(size_t i = 0; i < SimdWidth; ++i)
+						{
+							//node.prefetchChild(j*SimdWidth+i);
+							stack.conditional_push( (resultMask[j] >> i) & 1, node.node(j*SimdWidth+i),tTempArr[j][i]);
+						}
+					}
+
+			}
+		}
+		
+		Real t = std::numeric_limits<Real>::infinity();
+		Vector2 bary;
+		int triId = 0;
+
+		for(int i = 0; i < SimdWidth; ++i)
+			if(triIds[i] != 0)
+			{
+				t = tTemp[i];
+				bary.x() = baryTemp.x()[i];
+				bary.y() = baryTemp.y()[i];
+				triId = triIds[i];
+			}
+		
+		if(triId != 0)
+		{
+			if(iterator->absoluteIntersectionLocation)(*iterator->absoluteIntersectionLocation) = rayBase.origin()+ rayBase.direction()*t;
+			if(iterator->rayRelativeIntersectionLocation)(*iterator->rayRelativeIntersectionLocation) = t;
+			if(iterator->primitiveRelativeIntersectionLocation)(*iterator->primitiveRelativeIntersectionLocation) = bary;
+			if(iterator->primitiveIdentifier)(*iterator->primitiveIdentifier) = triId - 1;
+		}
+		else
+		{
+			if(iterator->absoluteIntersectionLocation)(*iterator->absoluteIntersectionLocation) = Vector3(0.0f,0.0f,0.0f);
+			if(iterator->rayRelativeIntersectionLocation)(*iterator->rayRelativeIntersectionLocation) = -1.0f;
+			if(iterator->primitiveRelativeIntersectionLocation)(*iterator->primitiveRelativeIntersectionLocation) = Vector2(0.0f,0.0f);
+			if(iterator->primitiveIdentifier)(*iterator->primitiveIdentifier) = -1;
+		}
+	}
+
+	__declspec(noinline) void processNode(const typename RayTypeInfo<FirstHitRay>::type& ray,int raysigns,const typename BVHType::nodeIterator& it,Scalari_T& triId,Scalar_T& t,Vector2_T& bary)
+	{
+	}
+	
+	std::auto_ptr<BVHType>	_sceneData;
+
+	RayData* _rayData;
+	public:
+		EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+};
+/*
+template<class _RayData,class _SceneReader,int _SimdWidth,int _NodeArraySize,int _LeafArraySize> struct BVHIntersectorEngine : public IIntersector<_RayData,_SceneReader>
+{
+	
+	typedef _SampleData SampleData;
+	typedef _RayData RayData;
+	typedef typename _RayData::RayIdType RayIdType;
+
+	static const int NodeArraySize = _NodeArraySize;
+	static const int LeafArraySize = _LeafArraySize;
+	static const int SimdWidth = _SimdWidth;
+	static const int NodeWidth = SimdWidth*NodeArraySize;
+	static const int LeafWidth = SimdWidth*LeafArraySize;
+
+	typedef SimdType<int,SimdWidth>	Scalari_T;
+	typedef SimdType<float,SimdWidth>	Scalar_T;
+	typedef typename Vector2v<SimdWidth>::type Vector2_T;
+	typedef typename Vector3v<SimdWidth>::type Vector3_T;
+
+	typedef TriAccel<SimdWidth>		PrimitiveType;
+	typedef AABBAccel<SimdWidth>	VolumeType;
+
+	typedef typename RayData::AnyHitRay AnyHitRay;
+	typedef typename RayData::FirstHitRay FirstHitRay;
+	
+	template<class _RayType> struct RayTypeInfo
+	{
+
+	};
+
+	template<> struct RayTypeInfo<AnyHitRay>
+	{
+		typedef RayAccel<SimdType<f32,SimdWidth>,3,SignModePrecompute,InvDirModePrecompute> type;
+		typedef typename Intersector<boost::mpl::vector< 
+				Raytrace::RayType<type>,
+				Raytrace::PrimitiveType<VolumeType>, 
+				Raytrace::RayCount<1>, 
+				Raytrace::PrimitiveCount<NodeArraySize>,
+				Raytrace::RayModeConstant
+			>>::type intersector_volume;
+		typedef typename Intersector<boost::mpl::vector< 
+				Raytrace::RayType<type>,
+				Raytrace::PrimitiveType<PrimitiveType>, 
+				Raytrace::RayCount<1>, 
+				Raytrace::PrimitiveCount<LeafArraySize>,
+				Raytrace::RayModeConstant
+			>>::type intersector_primitive;
+	};
+	
+	template<> struct RayTypeInfo<FirstHitRay>
+	{
+		typedef RayAccel<SimdType<f32,SimdWidth>,3,SignModePrecompute,InvDirModePrecompute> type;
+		typedef typename Intersector<boost::mpl::vector< 
+				Raytrace::RayType<type>,
+				Raytrace::PrimitiveType<VolumeType>, 
+				Raytrace::RayCount<1>, 
+				Raytrace::PrimitiveCount<NodeArraySize>,
+				Raytrace::RayModeUpdateMinimum
+			>>::type intersector_volume;
+		typedef typename Intersector<boost::mpl::vector< 
+				Raytrace::RayType<type>,
+				Raytrace::PrimitiveType<PrimitiveType>, 
+				Raytrace::RayCount<1>, 
+				Raytrace::PrimitiveCount<LeafArraySize>,
+				Raytrace::RayModeUpdateMinimum
+			>>::type intersector_primitive;
+	};
+	
+
+
 
 	std::auto_ptr<BVHType>	_sceneData;
 
 	SampleData& _sampleData;
 	RayData& _rayData;
 };
-
+*/
 }
 #endif

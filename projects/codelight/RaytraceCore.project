@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeLite_Project Name="RaytraceCore" InternalType="Library">
+  <Plugins>
+    <Plugin Name="qmake">
+      <![CDATA[00020001N0005Debug0000000000000001N0007Release000000000000]]>
+    </Plugin>
+  </Plugins>
+  <Description/>
+  <Dependencies/>
+  <VirtualDirectory Name="src">
+    <File Name="../../src/Core/XmlParserImp.cpp"/>
+    <File Name="../../src/Core/WhittedIntegrator.cpp"/>
+    <File Name="../../src/Core/TriMeshImp.cpp"/>
+    <File Name="../../src/Core/BVHIntersector.cpp"/>
+    <File Name="../../src/Core/CameraImp.cpp"/>
+    <File Name="../../src/Core/DummyEngine.cpp"/>
+    <File Name="../../src/Core/EngineBase.cpp"/>
+    <File Name="../../src/Core/Engines.cpp"/>
+    <File Name="../../src/Core/FastEngine.cpp"/>
+    <File Name="../../src/Core/headers.cpp"/>
+    <File Name="../../src/Core/ImageWriter.cpp"/>
+    <File Name="../../src/Core/MaterialImp.cpp"/>
+    <File Name="../../src/Core/MCSampler.cpp"/>
+    <File Name="../../src/Core/ObjectTypeDefinitions.cpp"/>
+    <File Name="../../src/Core/OutputImp.cpp"/>
+    <File Name="../../src/Core/ResultDefinitions.cpp"/>
+    <File Name="../../src/Core/SceneImp.cpp"/>
+    <File Name="../../src/Core/SimpleEngine.cpp"/>
+    <File Name="../../src/Core/SimpleIntersector.cpp"/>
+  </VirtualDirectory>
+  <VirtualDirectory Name="include">
+    <File Name="../../src/Core/headers.h"/>
+    <VirtualDirectory Name="Engine">
+      <File Name="../../src/Core/AABB.h"/>
+      <File Name="../../src/Core/BVH.h"/>
+      <File Name="../../src/Core/BVHConstructor.h"/>
+      <File Name="../../src/Core/BVHIntersector.h"/>
+      <File Name="../../src/Core/DummyEngine.h"/>
+      <File Name="../../src/Core/EngineBase.h"/>
+      <File Name="../../src/Core/Engines.h"/>
+      <File Name="../../src/Core/IEngine.h"/>
+      <File Name="../../src/Core/IIntegrator.h"/>
+      <File Name="../../src/Core/IIntersector.h"/>
+      <File Name="../../src/Core/IntersectorBase.h"/>
+      <File Name="../../src/Core/ISampler.h"/>
+      <File Name="../../src/Core/MCSampler.h"/>
+      <File Name="../../src/Core/PoissonDiscSampler.h"/>
+      <File Name="../../src/Core/RayAABBIntersection.h"/>
+      <File Name="../../src/Core/Ray.h"/>
+      <File Name="../../src/Core/RayData.h"/>
+      <File Name="../../src/Core/RayTriangleIntersection.h"/>
+      <File Name="../../src/Core/SampleData.h"/>
+      <File Name="../../src/Core/SceneReader.h"/>
+      <File Name="../../src/Core/SimpleIntersector.h"/>
+      <File Name="../../src/Core/WhittedIntegrator.h"/>
+      <File Name="../../src/Core/Triangle.h"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="Interface">
+      <File Name="../../src/Core/BaseImp.h"/>
+      <File Name="../../src/Core/CameraImp.h"/>
+      <File Name="../../src/Core/MaterialImp.h"/>
+      <File Name="../../src/Core/ObjectContainerImp.h"/>
+      <File Name="../../src/Core/OutputImp.h"/>
+      <File Name="../../src/Core/PropertySetImp.h"/>
+      <File Name="../../src/Core/SceneImp.h"/>
+      <File Name="../../src/Core/ObjectImp.h"/>
+      <File Name="../../src/Core/ObjectDatabase.h"/>
+      <File Name="../../src/Core/XmlParserImp.h"/>
+      <File Name="../../src/Core/TriMeshImp.h"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="Utils">
+      <File Name="../../src/Core/ArrayAdapter.h"/>
+      <File Name="../../src/Core/ConcurrentStorage.h"/>
+      <File Name="../../src/Core/ImageWriter.h"/>
+      <File Name="../../src/Core/InterlockedFunctions.h"/>
+      <File Name="../../src/Core/MathHelper.h"/>
+      <File Name="../../src/Core/SIMDType.h"/>
+      <File Name="../../src/Core/static_vector.h"/>
+      <File Name="../../src/Core/TemplateOptions.h"/>
+    </VirtualDirectory>
+  </VirtualDirectory>
+  <VirtualDirectory Name="shared">
+    <File Name="../../src/include/preproc.h"/>
+    <File Name="../../src/include/RaytraceCamera.h"/>
+    <File Name="../../src/include/RaytraceCommon.h"/>
+    <File Name="../../src/include/RaytraceLight.h"/>
+    <File Name="../../src/include/RaytraceMaterial.h"/>
+    <File Name="../../src/include/RaytraceObject.h"/>
+    <File Name="../../src/include/RaytraceOutput.h"/>
+    <File Name="../../src/include/RaytracePropertySet.h"/>
+    <File Name="../../src/include/RaytraceScene.h"/>
+    <File Name="../../src/include/RaytraceTriMesh.h"/>
+    <File Name="../../src/include/RaytraceXmlParser.h"/>
+    <File Name="../../src/include/types.h"/>
+  </VirtualDirectory>
+  <VirtualDirectory Name="tinyxml">
+    <File Name="../../src/TinyXml/tinystr.cpp"/>
+    <File Name="../../src/TinyXml/tinystr.h"/>
+    <File Name="../../src/TinyXml/tinyxml.cpp"/>
+    <File Name="../../src/TinyXml/tinyxml.h"/>
+    <File Name="../../src/TinyXml/tinyxmlerror.cpp"/>
+    <File Name="../../src/TinyXml/tinyxmlparser.cpp"/>
+  </VirtualDirectory>
+  <Settings Type="Dynamic Library">
+    <GlobalSettings>
+      <Compiler Options="" C_Options="">
+        <IncludePath Value="."/>
+      </Compiler>
+      <Linker Options="">
+        <LibraryPath Value="."/>
+      </Linker>
+      <ResourceCompiler Options=""/>
+    </GlobalSettings>
+    <Configuration Name="Debug" CompilerType="gnu g++" DebuggerType="GNU gdb debugger" Type="Dynamic Library" BuildCmpWithGlobalSettings="append" BuildLnkWithGlobalSettings="append" BuildResWithGlobalSettings="append">
+      <Compiler Options="-g -std=gnu++0x" C_Options="-g" Required="yes" PreCompiledHeader="" PCHInCommandLine="no" UseDifferentPCHFlags="no" PCHFlags="">
+        <IncludePath Value="."/>
+        <IncludePath Value="../../src/include"/>
+        <IncludePath Value="../../src/src"/>
+        <IncludePath Value="/home/jaschmid/Code/eigen-eigen-3.0.3"/>
+      </Compiler>
+      <Linker Options="" Required="yes"/>
+      <ResourceCompiler Options="" Required="no"/>
+      <General OutputFile="$(IntermediateDirectory)/$(ProjectName).so" IntermediateDirectory="./Debug" Command="" CommandArguments="" UseSeparateDebugArgs="no" DebugArguments="" WorkingDirectory="$(IntermediateDirectory)" PauseExecWhenProcTerminates="yes"/>
+      <Environment EnvVarSetName="&lt;Use Defaults&gt;" DbgSetName="&lt;Use Defaults&gt;">
+        <![CDATA[]]>
+      </Environment>
+      <Debugger IsRemote="no" RemoteHostName="" RemoteHostPort="" DebuggerPath="">
+        <PostConnectCommands/>
+        <StartupCommands/>
+      </Debugger>
+      <PreBuild/>
+      <PostBuild/>
+      <CustomBuild Enabled="no">
+        <RebuildCommand/>
+        <CleanCommand/>
+        <BuildCommand/>
+        <PreprocessFileCommand/>
+        <SingleFileCommand/>
+        <MakefileGenerationCommand/>
+        <ThirdPartyToolName/>
+        <WorkingDirectory/>
+      </CustomBuild>
+      <AdditionalRules>
+        <CustomPostBuild/>
+        <CustomPreBuild/>
+      </AdditionalRules>
+      <Completion>
+        <ClangCmpFlags/>
+        <ClangPP/>
+        <SearchPaths/>
+      </Completion>
+    </Configuration>
+    <Configuration Name="Release" CompilerType="gnu g++" DebuggerType="GNU gdb debugger" Type="Dynamic Library" BuildCmpWithGlobalSettings="append" BuildLnkWithGlobalSettings="append" BuildResWithGlobalSettings="append">
+      <Compiler Options="-std=gnu++0x" C_Options="" Required="yes" PreCompiledHeader="" PCHInCommandLine="no" UseDifferentPCHFlags="no" PCHFlags="">
+        <IncludePath Value="."/>
+        <IncludePath Value="../../src/include"/>
+        <IncludePath Value="../../src/src"/>
+        <IncludePath Value="/home/jaschmid/Code/eigen-eigen-3.0.3"/>
+      </Compiler>
+      <Linker Options="-O2" Required="yes"/>
+      <ResourceCompiler Options="" Required="no"/>
+      <General OutputFile="$(IntermediateDirectory)/$(ProjectName).so" IntermediateDirectory="./Release" Command="" CommandArguments="" UseSeparateDebugArgs="no" DebugArguments="" WorkingDirectory="$(IntermediateDirectory)" PauseExecWhenProcTerminates="yes"/>
+      <Environment EnvVarSetName="&lt;Use Defaults&gt;" DbgSetName="&lt;Use Defaults&gt;">
+        <![CDATA[]]>
+      </Environment>
+      <Debugger IsRemote="no" RemoteHostName="" RemoteHostPort="" DebuggerPath="">
+        <PostConnectCommands/>
+        <StartupCommands/>
+      </Debugger>
+      <PreBuild/>
+      <PostBuild/>
+      <CustomBuild Enabled="no">
+        <RebuildCommand/>
+        <CleanCommand/>
+        <BuildCommand/>
+        <PreprocessFileCommand/>
+        <SingleFileCommand/>
+        <MakefileGenerationCommand/>
+        <ThirdPartyToolName/>
+        <WorkingDirectory/>
+      </CustomBuild>
+      <AdditionalRules>
+        <CustomPostBuild/>
+        <CustomPreBuild/>
+      </AdditionalRules>
+      <Completion>
+        <ClangCmpFlags/>
+        <ClangPP/>
+        <SearchPaths/>
+      </Completion>
+    </Configuration>
+  </Settings>
+</CodeLite_Project>

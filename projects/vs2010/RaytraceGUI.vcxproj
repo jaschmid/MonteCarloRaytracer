@@ -313,18 +313,29 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ReleaseIntel|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ReleaseIntel|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="..\..\temp\RaytraceGUI\Win32\ReleaseIntel\Moc\moc_raytracegui.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ReleaseIntel|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="..\..\temp\RaytraceGUI\Win32\Release\Moc\moc_raytracegui.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ReleaseIntel|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ReleaseIntel|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\temp\RaytraceGUI\x64\Debug\Moc\moc_raytracegui.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ReleaseIntel|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ReleaseIntel|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -428,7 +439,7 @@
   </ImportGroup>
   <ProjectExtensions>
     <VisualStudio>
-      <UserProperties UicDir=".\..\..\temp\RaytraceGUI\$(PlatformName)\$(ConfigurationName)\Uic" MocDir=".\..\..\temp\RaytraceGUI\$(PlatformName)\$(ConfigurationName)\Moc" MocOptions="" RccDir=".\..\..\temp\RaytraceGUI\$(PlatformName)\$(ConfigurationName)\Rcc" lupdateOnBuild="1" lupdateOptions="" lreleaseOptions="" />
+      <UserProperties UicDir=".\..\..\temp\RaytraceGUI\$(PlatformName)\$(ConfigurationName)\Uic" MocDir=".\..\..\temp\RaytraceGUI\$(PlatformName)\$(ConfigurationName)\Moc" MocOptions="" RccDir=".\..\..\temp\RaytraceGUI\$(PlatformName)\$(ConfigurationName)\Rcc" lupdateOnBuild="1" lupdateOptions="" lreleaseOptions="" QtVersion_x0020_Win32="Qt-4.7.4" />
     </VisualStudio>
   </ProjectExtensions>
 </Project>

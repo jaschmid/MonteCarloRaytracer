@@ -23,6 +23,7 @@
 #include "Triangle.h"
 #include "AABB.h"
 #include "BVHConstructor.h"
+#include "ArrayAdapter.h"
 
 #ifndef RAYTRACE_BVH_H_INCLUDED
 #define RAYTRACE_BVH_H_INCLUDED
@@ -44,7 +45,7 @@ namespace Raytrace {
 		typedef _LeafContainer											LeafElement;
 		typedef struct _TreeElement
 		{
-			inline _TreeElement(const std::array<VolumeItem,NodeSize>& volumes) : _volumes(volumes) {}
+			template<class _Array> inline _TreeElement(const ConstArrayWrapper<_Array>& volumes) : _volumes(volumes) {}
 
 			VolumeElement							_volumes;
 			std::array<EncodedElement,NodeSize>		_children;
@@ -278,7 +279,7 @@ namespace Raytrace {
 					for(size_t i = node._numChildNodes; i < NodeSize; ++i)
 						subvolumes[i] = VolumeItem::Empty();
 
-					new (element) TreeElement(subvolumes);
+					new (element) TreeElement( ConstArrayWrapper<std::array<VolumeItem,NodeSize>>(subvolumes) );
 						
 					for(size_t i = 0; i < node._numChildNodes; ++i)
 						nodeStack.push_back(tempNode(&constructor._nodes[ node._childNodes[i] ],&element->_children[i]));
@@ -302,7 +303,7 @@ namespace Raytrace {
 					for(size_t i = node._childItemEnd-node._childItemBegin; i < LeafSize; ++i)
 						leafs[i] = LeafItem::Empty();
 
-					new (element) LeafElement(leafs);
+					new (element) LeafElement( ConstArrayWrapper<std::array<LeafItem,LeafSize>>(leafs) );
 
 					if(parent)
 						*parent = encodeLeaf(element);
@@ -380,8 +381,8 @@ namespace Raytrace {
 		void*							_memory;
 
 		/*
-		std::vector<LeafElement,Eigen::aligned_allocator<LeafElement>>		_leaf;
-		std::vector<TreeElement,Eigen::aligned_allocator<TreeElement>>		_node;*/
+		std::vector<LeafElement,AlignedAllocator<LeafElement>>		_leaf;
+		std::vector<TreeElement,AlignedAllocator<TreeElement>>		_node;*/
 	};
 
 }

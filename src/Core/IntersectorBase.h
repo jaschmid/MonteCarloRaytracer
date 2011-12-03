@@ -106,25 +106,8 @@ namespace Raytrace {
 
 	namespace detail{
 
-		template<class _Options,class PrimitiveType> struct IntersectorResolver
-		{
-			IntersectorResolver()
-			{
-				static_assert(false,"Unknown Primitive Type");
-			}
-
-			typedef void type;
-		};
-		
-		template<class _Options> struct IntersectorResolver<_Options,void>
-		{
-			IntersectorResolver()
-			{
-				static_assert(false,"Specify a Primitive Type");
-			}
-
-			typedef void type;
-		};
+		// signature
+		template<class _Options,class PrimitiveType> struct IntersectorResolver;
 	}
 
 	template<class _Options> struct Intersector

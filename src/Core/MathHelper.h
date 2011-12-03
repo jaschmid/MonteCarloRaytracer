@@ -21,10 +21,6 @@
 
 #include <boost/shared_ptr.hpp>
 #include <RaytraceCommon.h>
-#include "Triangle.h"
-#include "Ray.h"
-#include "AABB.h"
-#include "SIMDType.h"
 
 namespace Raytrace {
 	
@@ -68,6 +64,48 @@ namespace Raytrace {
 	template<class _A,class _B> struct findCommonType
 	{
 		typedef typename detail::_findCommonType<std::is_convertible<_A,_B>::value,std::is_convertible<_B,_A>::value,_A,_B>::type type;
+	};
+
+	template<class _C> inline _C Zero()
+	{
+		return _C::Zero();
+	}
+	template<> inline u32 Zero<u32>()
+	{
+		return 0;
+	}
+	template<> inline i32 Zero<i32>()
+	{
+		return 0;
+	}
+	template<> inline f32 Zero<f32>()
+	{
+		return 0.0f;
+	}
+	template<> inline f64 Zero<f64>()
+	{
+		return 0.0;
+	}
+
+	template<class _C> struct BooleanOf
+	{
+		typedef typename _C::Boolean type;
+	};
+	template<> struct BooleanOf<f32>
+	{
+		typedef bool type;
+	};
+	template<> struct BooleanOf<f64>
+	{
+		typedef bool type;
+	};
+	template<> struct BooleanOf<u32>
+	{
+		typedef bool type;
+	};
+	template<> struct BooleanOf<i32>
+	{
+		typedef bool type;
 	};
 	/*
 	inline bool Intersect(const RayAccel& ray,const TriAccel& acc,Real& t,Vector2& barycentric)

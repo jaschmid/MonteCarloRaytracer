@@ -34,16 +34,16 @@ namespace Raytrace {
 		static const PropertyMap& GetPropertySet()
 		{
 			const static PropertyMap set = boost::assign::map_list_of
-				("up",Property(&GetUp,&SetUp))
-				("to",Property(&GetTo,&SetTo))
-				("from",Property(&GetFrom,&SetFrom))
-				("fov",Property(&GetFov,&SetFov))
-				("aspect",Property(&GetAspect,&SetAspect))
-				("aperture",Property(&GetAperture,&SetAperture))
-				("focal",Property(&GetFocal,&SetFocal))
-				("type",Property(&GetCameraType,&SetCameraType))
-				("bokeh_type",Property(&GetBokehType,&SetBokehType))
-				("bokeh_rotation",Property(&GetBokehRotation,&SetBokehRotation));
+				("up",Property(&CameraImp::GetUp,&CameraImp::SetUp))
+				("to",Property(&CameraImp::GetTo,&CameraImp::SetTo))
+				("from",Property(&CameraImp::GetFrom,&CameraImp::SetFrom))
+				("fov",Property(&CameraImp::GetFov,&CameraImp::SetFov))
+				("aspect",Property(&CameraImp::GetAspect,&CameraImp::SetAspect))
+				("aperture",Property(&CameraImp::GetAperture,&CameraImp::SetAperture))
+				("focal",Property(&CameraImp::GetFocal,&CameraImp::SetFocal))
+				("type",Property(&CameraImp::GetCameraType,&CameraImp::SetCameraType))
+				("bokeh_type",Property(&CameraImp::GetBokehType,&CameraImp::SetBokehType))
+				("bokeh_rotation",Property(&CameraImp::GetBokehRotation,&CameraImp::SetBokehRotation));
 			return set;
 		}
 

@@ -111,6 +111,7 @@ namespace Raytrace {
 		static const ResultClass ParsingError;
 		static const ResultClass RenderingInProgress;
 		static const ResultClass RenderingComplete;
+		static const ResultClass NotImplemented;
 
 		Result() :_class(&Undefined){}
 		Result(const Result& r) :_class(r._class){}

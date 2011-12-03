@@ -20,30 +20,583 @@
 #define RAYTRACE_SAMPLE_DATA_GUARD
 
 #include <RaytraceCommon.h>
-
-#ifdef _DEBUG
-static const int MAX_SAMPLES_PER_STACK	= 256;
-static const int SAMPLES_PER_BLOCK		= 4;
-#else
-static const int MAX_SAMPLES_PER_STACK	= 1024*1024;
-static const int SAMPLES_PER_BLOCK		= 16;
-#endif
-
-static const int SHADOWS_PER_BLOCK		= 8*64;
+#include "ConcurrentStorage.h"
 
 namespace Raytrace {
 	
-template<class _SampleIdType = u32,class _ShadowIdType = u32> struct SimpleSampleData
+template<int _NumSamplesPerBlock,int _ControlledSampleDimensions,int _UncontrolledSampleDimensions,class _SampleOutput = Eigen::Matrix<f32,3,1>,class _Scalar = f32> struct SimpleSampleData
 {
 public:
 	
+	static const size_t NumSamplesPerBlock = _NumSamplesPerBlock;
+	static const size_t ControlledSampleDimensions = _ControlledSampleDimensions;
+	static const size_t UncontrolledSampleDimensions = _UncontrolledSampleDimensions;
+
+	typedef size_t SampleId;
+
+	typedef _Scalar Scalar;
+	typedef _SampleOutput SampleOutput;
+	
+	typedef ConcurrentStorage<SampleId,NumSamplesPerBlock,size_t> ActiveSamplesArrayType;
+	typedef ConcurrentStorage<SampleId,NumSamplesPerBlock,size_t> CompletedSamplesArrayType;
+
+	enum MODE 
+	{
+		ACTIVE,
+		COMPLETED,
+		INACTIVE
+	};
+
+	struct Sample
+	{
+		const SampleOutput& getResult() const
+		{
+			return _result;
+		}
+
+		void setResult(const SampleOutput& result)
+		{
+			_result = result;
+		}
+
+		const Scalar getX() const
+		{
+			return getValue(0);
+		}
+		
+		const Scalar getY() const
+		{
+			return getValue(1);
+		}
+		
+		void setX(const Scalar& value)
+		{
+			setValue(0,value);
+		}
+		
+		void setY(const Scalar& value)
+		{
+			setValue(1,value);
+		}
+
+		inline void setValue(u16 i,const Scalar& value)
+		{
+			_updatedValues.set(i,true);
+			_randomValues[i] = value;
+		}
+
+		inline const Scalar& getValue(u16 i) const
+		{
+			_updatedValues.set(i,false);
+			return _randomValues[i];
+		}
+
+		SampleOutput									_result;
+		std::array<Scalar,ControlledSampleDimensions>	_randomValues;
+		u16												_numGeneratedValues;
+		u16												_numUsedValues;
+		MODE											_mode;
+		mutable std::bitset<ControlledSampleDimensions>			_updatedValues;
+	};
+
+
+	struct activeIterator
+	{
+		typedef typename ActiveSamplesArrayType::MultiAccessIterator Iterator;
+		typedef activeIterator ThisType;
+
+		inline activeIterator(SimpleSampleData& parent,size_t thread,Iterator* iterator) : _parent(parent),_iterator(iterator),_threadId(thread)
+		{
+			if(_iterator)
+				nextSample();
+			else
+			{
+				_currentSample = nullptr;
+				_currentIndex = -1;
+			}
+		}
+	
+		inline const Sample& sample() const
+		{
+			return *_currentSample;
+		}
+
+		inline const Sample& operator*() const
+		{
+			return *_currentSample;
+		}
+
+		inline  const Sample* operator->() const
+		{
+			_currentSample;
+		}
+
+		inline Sample& sample()
+		{
+			return *_currentSample;
+		}
+
+		inline Sample& operator*()
+		{
+			return *_currentSample;
+		}
+
+		inline  Sample* operator->()
+		{
+			return _currentSample;
+		}
+
+		inline bool operator ==(const ThisType& right) const
+		{
+			return right._currentSample == _currentSample;
+		}
+		
+		inline bool operator !=(const ThisType& right) const
+		{
+			return right._currentSample != _currentSample;
+		}
+		
+		inline bool keepSample()
+		{
+			assert(_currentSample->_mode == ACTIVE);
+
+			size_t index = _parent._activeSamples[_parent._updateSamplesIn].pushElements(_threadId,1);
+			_parent._activeSamples[_parent._updateSamplesIn].getElement(index) = _currentIndex;
+
+			_currentSample->_mode = ACTIVE;
+			
+			nextSample();
+
+			return true;
+		}
+		
+		inline bool completeSample()
+		{
+			assert(_currentSample->_mode == ACTIVE);
+
+			size_t index = _parent._completedSamples.pushElements(_threadId,1);
+			_parent._completedSamples.getElement(index) = _currentIndex;
+
+			_currentSample->_mode = COMPLETED;
+			
+			nextSample();
+
+			return true;
+		}
+
+		inline SampleId index() const 
+		{
+			return _currentIndex;
+		}
+
+	private:
+
+		inline void nextSample()
+		{
+			SampleId* i = _iterator->getNextElementPointer(_threadId);
+
+			if(i == nullptr)
+			{
+				_currentIndex = -1;
+				_currentSample = nullptr;
+			}
+			else
+			{
+				_currentIndex = *i;
+				_currentSample = &_parent._sampleBuffer[_currentIndex];
+			}
+		}
+
+		Sample* _currentSample;
+		SampleId _currentIndex;
+		size_t _threadId;
+		Iterator* _iterator;
+		SimpleSampleData& _parent;
+	};
+	
+	struct completeIterator
+	{
+
+		typedef typename CompletedSamplesArrayType::MultiAccessIterator Iterator;
+		typedef completeIterator ThisType;
+
+		inline completeIterator(SimpleSampleData& parent,size_t thread,Iterator* iterator) : _parent(parent),_iterator(iterator),_threadId(thread)
+		{
+			if(_iterator)
+				nextSample();
+			else
+			{
+				_currentSample = nullptr;
+				_currentIndex = -1;
+			}
+		}
+		
+		inline const Sample& sample() const
+		{
+			return *_currentSample;
+		}
+
+		inline const Sample& operator*() const
+		{
+			return *_currentSample;
+		}
+
+		inline  const Sample* operator->() const
+		{
+			_currentSample;
+		}
+
+		inline Sample& sample()
+		{
+			return *_currentSample;
+		}
+
+		inline Sample& operator*()
+		{
+			return *_currentSample;
+		}
+
+		inline  Sample* operator->()
+		{
+			return _currentSample;
+		}
+
+		inline bool operator ==(const ThisType& right) const
+		{
+			return right._currentSample == _currentSample;
+		}
+		
+		inline bool operator !=(const ThisType& right) const
+		{
+			return right._currentSample != _currentSample;
+		}
+
+		inline bool activateSample()
+		{
+			assert(_currentSample->_mode == COMPLETED);
+
+			size_t index = _parent._activeSamples[_parent._updateSamplesIn].pushElements(_threadId,1);
+			_parent._activeSamples[_parent._updateSamplesIn].getElement(index) = _currentIndex;
+
+			_currentSample->_mode = ACTIVE;
+
+			nextSample();
+
+			return true;
+		}
+		
+		inline bool deactivateSample()
+		{
+			assert(_currentSample->_mode == COMPLETED);
+
+			_currentSample->_mode = INACTIVE;
+
+			nextSample();
+
+			return true;
+		}
+
+		inline SampleId index() const 
+		{
+			return _currentItem;
+		}
+	private:
+		
+		inline void nextSample()
+		{
+			SampleId* i = _iterator->getNextElementPointer(_threadId);
+			if(i == nullptr)
+				_currentSample = nullptr;
+			else
+			{
+				_currentIndex = *i;
+				_currentSample = &_parent._sampleBuffer[_currentIndex];
+			}
+		}
+		Sample* _currentSample;
+		SampleId  _currentIndex;
+		size_t _threadId;
+		Iterator* _iterator;
+		SimpleSampleData& _parent;
+	};
+
+	struct inactiveIterator
+	{
+		typedef inactiveIterator ThisType;
+
+		inline inactiveIterator(SimpleSampleData& parent, size_t threadId) : _parent(parent),_threadId(threadId)
+		{
+			_currentBlockBegin = 0;
+			_currentBlockEnd = 0;
+			_currentItem = 0;
+			_currentSample = nullptr;
+
+			nextSample();
+		}
+
+		inline inactiveIterator(SimpleSampleData& parent) : _parent(parent),_threadId(0)
+		{
+			_currentBlockBegin = 0;
+			_currentBlockEnd = 0;
+			_currentItem = 0;
+			_currentSample = nullptr;
+		}
+		
+		inline const Sample& sample() const
+		{
+			return *_currentSample;
+		}
+
+		inline const Sample& operator*() const
+		{
+			return *_currentSample;
+		}
+
+		inline  const Sample* operator->() const
+		{
+			_currentSample;
+		}
+
+		inline Sample& sample()
+		{
+			return *_currentSample;
+		}
+
+		inline Sample& operator*()
+		{
+			return *_currentSample;
+		}
+
+		inline  Sample* operator->()
+		{
+			return _currentSample;
+		}
+
+		inline bool operator ==(const ThisType& right) const
+		{
+			return right._currentSample == _currentSample;
+		}
+		
+		inline bool operator !=(const ThisType& right) const
+		{
+			return right._currentSample != _currentSample;
+		}
+
+		inline bool activateSample()
+		{
+			assert(_currentSample->_mode == INACTIVE);
+
+			size_t index = _parent._activeSamples[_parent._updateSamplesIn].pushElements(_threadId,1);
+			_parent._activeSamples[_parent._updateSamplesIn].getElement(index) = _currentItem;
+
+			_currentSample->_mode = ACTIVE;
+
+			nextSample();
+
+			return true;
+		}
+
+		inline SampleId index() const 
+		{
+			return _currentItem;
+		}
+
+	private:
+
+		inline void nextSample()
+		{
+			do
+			{
+				nextSampleStep();
+			}
+			while(_currentSample && _currentSample->_mode != INACTIVE);
+		}
+
+		inline void nextSampleStep()
+		{
+			++_currentItem;
+			if(_currentItem >= _currentBlockEnd)
+			{
+				size_t _currentBlock = InterlockedIncrement(_parent._concurrentIteratorBlock);
+				_currentBlockBegin = _currentBlock * SimpleSampleData::NumSamplesPerBlock;
+				_currentBlockEnd = std::min<size_t>(_currentBlockBegin+NumSamplesPerBlock,_parent._sampleBuffer.size());
+
+				_currentItem = _currentBlockBegin;
+			}
+			if(_currentItem >= _parent._sampleBuffer.size())
+				_currentSample = nullptr;
+			else
+				_currentSample = &_parent._sampleBuffer[_currentItem];
+		}
+
+		Sample* _currentSample;
+		size_t _threadId;
+		SampleId _currentItem;
+		SampleId _currentBlockBegin;
+		SampleId _currentBlockEnd;
+		SimpleSampleData& _parent;
+	};
+
+	friend struct activeIterator;
+	friend struct completeIterator;
+	friend struct concurrentIterator;
+
+	inline void resizeSampleBuffer(SampleId newSize)
+	{
+		size_t oldSize = _sampleBuffer.size();
+		_sampleBuffer.resize(newSize);
+
+		for(size_t i = oldSize; i < newSize; ++i)
+			_sampleBuffer[i]._mode = INACTIVE;
+	}
+
+	inline inactiveIterator beginInactive(size_t threadId)
+	{
+		return inactiveIterator(*this,threadId);
+	}
+	
+	inline inactiveIterator endInactive(size_t threadId)
+	{
+		return inactiveIterator(*this);
+	}
+	
+	inline completeIterator beginCompleted(size_t threadId)
+	{
+		return completeIterator(*this,threadId,&_completedSamplesIterator);
+	}
+	
+	inline completeIterator endCompleted(size_t threadId)
+	{
+		return completeIterator(*this,threadId,nullptr);
+	}
+
+	inline activeIterator beginActive(size_t threadId)
+	{
+		return activeIterator(*this,threadId,&_activeSamplesIterator[_updateSamplesOut]);
+	}
+	
+	inline activeIterator endActive(size_t threadId)
+	{
+		return activeIterator(*this,threadId,nullptr);
+	}
+
+	inline void InitializeST(size_t numThreads)
+	{
+		_updateSamplesOut = 0;
+		_updateSamplesIn = 1;
+
+		_activeSamples[_updateSamplesOut].prepare(numThreads);
+		_activeSamples[_updateSamplesIn].prepare(numThreads);
+		_completedSamples.prepare(numThreads);
+	}
+	
+	
+	inline void PrepareSampleST()
+	{
+		_completedSamplesIterator = _completedSamples.begin();
+		_concurrentIteratorBlock = 0;
+	}
+	
+	inline void PrepareIntegrateST()
+	{
+		_activeSamplesIterator[_updateSamplesOut] = _activeSamples[_updateSamplesOut].begin();
+	}
+	
+	inline void CompleteSampleST()
+	{
+		_completedSamples.clear();
+
+		size_t temp =_updateSamplesOut ;
+		_updateSamplesOut = _updateSamplesIn;
+		_updateSamplesIn = temp;
+	}
+	
+	inline void CompleteIntegrateST()
+	{
+		_activeSamples[_updateSamplesOut].clear();
+
+		size_t temp =_updateSamplesOut ;
+		_updateSamplesOut = _updateSamplesIn;
+		_updateSamplesIn = temp;
+	}
+
+	inline size_t getNumActiveSamples() const
+	{
+		return _activeSamples[_updateSamplesOut].size();
+	}
+	inline size_t getNumCompletedSamples() const
+	{
+		return _completedSamples.size();
+	}
+
+	inline size_t getSampleBufferSize() const
+	{
+		return _sampleBuffer.size();
+	}
+	/*
+	inline Sample* pushSample(size_t threadId)
+	{
+		//should really do this block wise
+		size_t id = InterlockedIncrement(_pushIndex);
+
+		while(_sampleBuffer[id]._mode != REMOVED && id < _sampleBuffer.size())
+			id = InterlockedIncrement(_pushIndex);
+
+		if(id >= _sampleBuffer.size())
+			return nullptr;
+
+		size_t index = _activeSamples[_updateSamplesIn].pushElements(threadId,1);
+		_activeSamples[_updateSamplesIn].getElement(index) = id;
+
+		return &_sampleBuffer[id];
+	}*/
+	
+	// specific sample modification functions
+	// should only be used if the sampler knows what it's doing
+	// activating samples in non sequential order reduces performance
+	// basically only metropolis samplers need this that wan't to conserve
+	// random values from one step to the next
+	inline const Sample* deactivateSample(size_t threadId,SampleId id)
+	{
+		if(_sampleBuffer[id]._mode == ACTIVE)
+			return nullptr;
+		else
+		{
+			_sampleBuffer[id]._mode = INACTIVE;
+			return &_sampleBuffer[id];
+		}
+	}
+
+	inline Sample* activateSample(size_t threadId,SampleId id)
+	{
+		if(_sampleBuffer[id]._mode != INACTIVE)
+			return nullptr;
+		else
+		{
+			size_t index = _activeSamples[_updateSamplesIn].pushElements(threadId,1);
+			_activeSamples[_updateSamplesIn].getElement(index) = id;
+
+			_sampleBuffer[id]._mode = ACTIVE;
+			return &_sampleBuffer[id];
+		}
+	}
+
+	std::vector<Sample>		_sampleBuffer;
+	
+	std::array<ActiveSamplesArrayType,2> _activeSamples;
+	CompletedSamplesArrayType _completedSamples;
+
+	std::array<typename ActiveSamplesArrayType::MultiAccessIterator,2> _activeSamplesIterator;
+	typename CompletedSamplesArrayType::MultiAccessIterator _completedSamplesIterator;
+
+	size_t _updateSamplesIn;
+	size_t _updateSamplesOut;
+	volatile size_t _concurrentIteratorBlock;
+	
+	/*
 	typedef _SampleIdType IntersectionIdType;
 	typedef _SampleIdType SampleIdType;
 	typedef _ShadowIdType ShadowIdType;
-	
-	static const IntersectionIdType INVALID_INTERSECTION_ID = -1;
-	static const SampleIdType INVALID_SAMPLE_ID = -1;
-	static const ShadowIdType INVALID_SHADOW_ID = -1;
 	
 	static const IntersectionIdType IntersectionBlockSize = SAMPLES_PER_BLOCK;
 	static const SampleIdType SampleBlockSize = SAMPLES_PER_BLOCK;
@@ -439,7 +992,7 @@ private:
 	IntersectionDataType				_intersectionData;
 
 	std::vector<StackLevel>				_sampleStack;
-	std::vector<ThreadData>				_threadData;
+	std::vector<ThreadData>				_threadData;*/
 };
 
 }

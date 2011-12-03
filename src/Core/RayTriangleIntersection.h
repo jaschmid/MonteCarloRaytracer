@@ -40,7 +40,7 @@ struct Tag_RayTriangleIntersectionMethod
 
 struct RayTriangleIntersectionMethodHavel 
 {
-	typedef Tag_RayTriangleIntersectionMethod optionsTag;
+	typedef Tag_RayTriangleIntersectionMethod Tag;
 	static const bool optionsDefined = true;
 };
 
@@ -189,7 +189,7 @@ template<class _Options,class _Method,class _RayMode> struct RayTriangleIntersec
 		ConstArrayWrapper<_RawTriangleArray,TriangleType,TriangleCount> triangles(rawTriangles);
 		ArrayWrapper<_RawTArray,Scalar_T,RayCount> t(rawT);
 		ArrayWrapper<_RawUVArray,Vector2_T,RayCount> uv(rawUV);
-		ArrayWrapper<_RawIdArray,typename TriangleType::IndexType,RayCount> ids(rawId);
+		ArrayWrapper<_RawIdArray,typename TriangleType::UserData,RayCount> ids(rawId);
 
 		bool result = false;
 		
@@ -203,10 +203,11 @@ template<class _Options,class _Method,class _RayMode> struct RayTriangleIntersec
 				{
 					t[i].ConditionalAssign(valid[index],tFound[index], t[i]);
 					t[i] = t[i].Min();
-					Scalar_T::Boolean resultMask = (t[i] == tFound[index]);
-					ids[i] = triangles[j].index() & resultMask;
+					Scalar_T::Boolean resultMask = (t[i] == tFound[index]) & valid[index];
+					ids[i] = triangles[j].user() & resultMask;
 					uv[i].x() = uvFound[index].x() & resultMask;
 					uv[i].y() = uvFound[index].y() & resultMask;
+
 					result = true;
 				}
 			}

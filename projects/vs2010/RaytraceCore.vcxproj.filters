@@ -31,8 +31,29 @@
     <Filter Include="Header Files\Engine\Geometry">
       <UniqueIdentifier>{cc4661da-1244-4b92-978b-03c683668b51}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\Engine\Template Support">
+    <Filter Include="Header Files\Engine\SurfaceIntegrators">
+      <UniqueIdentifier>{56419bfe-5fe4-4ccf-ae00-e4e3479e4130}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Engine\Intersectors">
+      <UniqueIdentifier>{05087499-dea5-49cf-a279-3971a4617046}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Engine\Samplers">
+      <UniqueIdentifier>{a833e5a8-c867-424a-96d4-a71647c7eb8a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Engine\Util">
       <UniqueIdentifier>{3abed8e6-f7e8-4e71-8bd8-bde208727407}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Engine\Interfaces">
+      <UniqueIdentifier>{99275863-7ffe-40e1-9d90-42cb0fdafd2a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Engine\Intersectors">
+      <UniqueIdentifier>{1f28a8e5-ca1a-49aa-9307-089967cea19c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Engine\Integrators">
+      <UniqueIdentifier>{f8eca1c2-4449-4fec-be93-715ce46f8d17}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Engine\Samplers">
+      <UniqueIdentifier>{77ca9b20-b654-4212-a72b-028679d74b71}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -129,24 +150,6 @@
     <ClInclude Include="..\..\src\core\EngineBase.h">
       <Filter>Header Files\Engine</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\core\Engines.h">
-      <Filter>Header Files\Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\core\ImageWriter.h">
-      <Filter>Header Files\Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\core\SimpleGenerator.h">
-      <Filter>Header Files\Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\core\SimpleIntersector.h">
-      <Filter>Header Files\Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\core\WhittedShader.h">
-      <Filter>Header Files\Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\core\ConcurrentStorage.h">
-      <Filter>Header Files\Engine</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\include\Math\InterlockedFunctions.h">
       <Filter>Shared Headers\Math</Filter>
     </ClInclude>
@@ -159,18 +162,6 @@
     <ClInclude Include="..\..\src\include\Math\VectorBase.h">
       <Filter>Shared Headers\Math</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\core\MathHelper.h">
-      <Filter>Header Files\Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\core\SceneReader.h">
-      <Filter>Header Files\Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\core\BVH.h">
-      <Filter>Header Files\Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\core\BVHIntersector.h">
-      <Filter>Header Files\Engine</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\core\RayData.h">
       <Filter>Header Files\Engine</Filter>
     </ClInclude>
@@ -182,15 +173,6 @@
     </ClInclude>
     <ClInclude Include="..\..\src\include\preproc.h">
       <Filter>Shared Headers</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\Core\SIMDType.h">
-      <Filter>Header Files\Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\Core\BVHConstructor.h">
-      <Filter>Header Files\Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\Core\PoissonDiscSampler.h">
-      <Filter>Header Files\Engine</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\core\AABB.h">
       <Filter>Header Files\Engine\Geometry</Filter>
@@ -208,10 +190,70 @@
       <Filter>Header Files\Engine\Geometry</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\Core\TemplateOptions.h">
-      <Filter>Header Files\Engine\Template Support</Filter>
+      <Filter>Header Files\Engine\Util</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\Core\IntersectorBase.h">
       <Filter>Header Files\Engine\Geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Core\static_vector.h">
+      <Filter>Header Files\Engine\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Core\ArrayAdapter.h">
+      <Filter>Header Files\Engine\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\core\BVH.h">
+      <Filter>Header Files\Engine\Intersectors</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\core\BVHIntersector.h">
+      <Filter>Header Files\Engine\Intersectors</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Core\BVHConstructor.h">
+      <Filter>Header Files\Engine\Intersectors</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\core\ConcurrentStorage.h">
+      <Filter>Header Files\Engine\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\core\ImageWriter.h">
+      <Filter>Header Files\Engine\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\core\MathHelper.h">
+      <Filter>Header Files\Engine\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Core\PoissonDiscSampler.h">
+      <Filter>Header Files\Engine\Samplers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\core\SceneReader.h">
+      <Filter>Header Files\Engine\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Core\SIMDType.h">
+      <Filter>Header Files\Engine\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\core\SimpleIntersector.h">
+      <Filter>Header Files\Engine\Intersectors</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Core\IIntersector.h">
+      <Filter>Header Files\Engine\Interfaces</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Core\ISampler.h">
+      <Filter>Header Files\Engine\Interfaces</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Core\IEngine.h">
+      <Filter>Header Files\Engine\Interfaces</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Core\IIntegrator.h">
+      <Filter>Header Files\Engine\Interfaces</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Core\Engines.h">
+      <Filter>Header Files\Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Core\MCSampler.h">
+      <Filter>Header Files\Engine\Samplers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Core\WhittedIntegrator.h">
+      <Filter>Header Files\Engine\SurfaceIntegrators</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Core\Aligned.h">
+      <Filter>Header Files\Engine\Util</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -254,20 +296,23 @@
     <ClCompile Include="..\..\src\core\TriMeshImp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\core\DummyEngine.cpp">
-      <Filter>Source Files\Engine</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\core\EngineBase.cpp">
-      <Filter>Source Files\Engine</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\core\SimpleEngine.cpp">
       <Filter>Source Files\Engine</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\core\ImageWriter.cpp">
       <Filter>Source Files\Engine</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\Core\FastEngine.cpp">
-      <Filter>Source Files\Engine</Filter>
+    <ClCompile Include="..\..\src\Core\SimpleIntersector.cpp">
+      <Filter>Source Files\Engine\Intersectors</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Core\BVHIntersector.cpp">
+      <Filter>Source Files\Engine\Intersectors</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Core\WhittedIntegrator.cpp">
+      <Filter>Source Files\Engine\Integrators</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Core\MCSampler.cpp">
+      <Filter>Source Files\Engine\Samplers</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

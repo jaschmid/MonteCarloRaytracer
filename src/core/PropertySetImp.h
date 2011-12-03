@@ -66,7 +66,8 @@ namespace Raytrace {
 	template<> inline bool LexicalCast<Vector3,String>(const String& input,Vector3& output)
 	{
 		std::vector<String> elements;
-		boost::algorithm::split(elements,boost::algorithm::trim_copy(input),boost::algorithm::is_space(),boost::algorithm::token_compress_on);
+		String trimmed = boost::algorithm::trim_copy(input);
+		boost::algorithm::split(elements,trimmed,boost::algorithm::is_space(),boost::algorithm::token_compress_on);
 		if(elements.size() != 3)
 			return false;
 		output.x() = boost::lexical_cast<Real,String>(elements[0]);
@@ -84,7 +85,8 @@ namespace Raytrace {
 	template<> inline bool LexicalCast<Vector4,String>(const String& input,Vector4& output)
 	{
 		std::vector<String> elements;
-		boost::algorithm::split(elements,boost::algorithm::trim_copy(input),boost::algorithm::is_space(),boost::algorithm::token_compress_on);
+		String trimmed = boost::algorithm::trim_copy(input);
+		boost::algorithm::split(elements,trimmed,boost::algorithm::is_space(),boost::algorithm::token_compress_on);
 		if(elements.size() != 4)
 			return false;
 		output.x() = boost::lexical_cast<Real,String>(elements[0]);
