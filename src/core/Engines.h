@@ -103,6 +103,9 @@ template<class _PrimitiveType> struct LoadedSceneReader;
 template<class _SampleData,class _SceneReader> 
 typename boost::shared_ptr<ISampler<_SampleData,_SceneReader>> CreateMCSampler();
 
+template<class _SampleData,class _SceneReader> 
+typename boost::shared_ptr<ISampler<_SampleData,_SceneReader>> CreateSobolSampler();
+
 // integrators
 
 template<class _SampleData,class _RayData,class _SceneReader> 
@@ -163,7 +166,8 @@ template<class _RayData,class _SampleData,class _SceneReader> struct EngineOptio
 	static const std::map<String,SamplerConstructor>& getSamplers()
 	{
 		static const std::map<String,SamplerConstructor> intersectors = assign::map_list_of
-			( String("Monte Carlo Sampler"), SamplerConstructor( &CreateMCSampler<SampleData,SceneReader> ) );
+			( String("Monte Carlo Sampler"), SamplerConstructor( &CreateMCSampler<SampleData,SceneReader> ) )
+			( String("Sobol Sampler"), SamplerConstructor( &CreateSobolSampler<SampleData,SceneReader> ) );
 		return intersectors;
 	}
 

@@ -66,8 +66,7 @@ Result OutputImp::SetOutputSurface(void* pData, int nDataSize, int xResolution, 
 		_outputFormat = R8G8B8A8;
 		break;
 	}
-
-	return Refresh();
+	return Result::Succeeded;
 }
 Result OutputImp::Refresh()
 {

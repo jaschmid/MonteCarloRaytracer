@@ -123,6 +123,12 @@ public:
 		_allocatedBlocks[currentBlock]._numUsed ++;
 		_threadData[threadId]._numElements ++;
 	}
+	
+	inline _Element* lastWriteElement(size_t threadId)
+	{
+		IdType currentBlock = _threadData[threadId]._currentWriteBlock;
+		return &_allocatedBlocks[currentBlock]._data[_allocatedBlocks[currentBlock]._numUsed-1];
+	}
 
 	// reading function
 

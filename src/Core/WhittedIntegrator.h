@@ -20,34 +20,11 @@
 #define RAYTRACE_WHITTED_INTEGRATOR_GUARD
 
 #include <RaytraceCommon.h>
-#include "EngineBase.h"
-#include "RayData.h"
-#include "SampleData.h"
-#include "SceneReader.h"
-#include "IIntegrator.h"
-#include "SplitUseWorkQueue.h"
-#include "chunk_vector.h"
-#include "FisheyeCamera.h"
+#include "IntegratorBase.h"
 
 namespace Raytrace {
-	
 
-struct Light
-{
-	Light(const Vector3& l,const Vector3& c) : _location(l), _color(c) {}
-	Vector3					_location;
-	Vector3					_color;
-};
-
-static const std::array<Light,3> Lights = { 
-	Light( Vector3(0.0f,.8f,1.0f) , Vector3(.5f,.5f,.5f) ),
-	Light( Vector3(.5f,.8f,1.0f) , Vector3(.5f,.5f,.5f) ),
-	Light( Vector3(0.0f,.5f,1.0f) , Vector3(.5f,.5f,.5f) )
-};
-
-static const Real Epsilon = 0.001f;
-
-template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlock> struct WhittedIntegrator : public IIntegrator<_SampleData,_RayData,_SceneReader>
+template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlock> struct WhittedIntegrator : public IntegratorBase<_SampleData,_RayData,_SceneReader>
 {
 	typedef _SampleData SampleData;
 	typedef _RayData RayData;
@@ -102,27 +79,6 @@ template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlo
 		std::array<IndirectNodeArray,2> _indirectNodes;
 	};
 
-	struct PrimitiveData
-	{
-		int			_material;
-		Vector3		_normal;
-		PrimitiveType _primitive;
-	};
-
-	struct MaterialSettings
-	{
-		Vector3	_color;
-		Vector3 _mirrorColor;
-
-		Real	_diffuseReflect;
-		Real	_specularReflect;
-		Real	_emit;
-		
-		Real	_indexOfRefraction;
-		Real	_translucency;
-		Real	_transparency;
-	};
-
 	typedef SplitUseWorkQueue<Path,NumPathsPerBlock> PathsArrayType;
 
 
@@ -133,43 +89,13 @@ template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlo
 	
 	void InitializePrepareST(size_t numThreads,const SceneReader& scene,SampleData& sampleData,RayData& rayData) 
 	{
-		PrimitiveType dummy;
+		InitializeSceneData(scene);
 
-		_primitives.resize(scene->getNumPrimitives());
-		_materials.resize(scene->getNumMaterials());
 		_threads.resize(numThreads);
 		_pathArrays[_readPathArray].prepare(numThreads);
 		_pathArrays[_writePathArray].prepare(numThreads);
 
 		_camera.Initialize( Vector2(.75f,.75f));
-
-		for(size_t i = 0; i < _materials.size(); ++i)
-		{
-			Material mat = scene->getMaterial((int)i);
-
-			_materials[i]._color = mat->GetColor().head<3>();
-			_materials[i]._mirrorColor = mat->GetMirrorColor().head<3>();
-			_materials[i]._diffuseReflect = mat->GetDiffuseReflect();
-			_materials[i]._specularReflect = mat->GetSpecularReflect();
-			_materials[i]._emit = mat->GetEmit();
-			_materials[i]._indexOfRefraction = mat->GetIOR();
-			_materials[i]._translucency = mat->GetTranslucency();
-			_materials[i]._transparency = mat->GetTransparency();
-
-		}
-
-		for(size_t i = 0; i < _primitives.size(); ++i)
-		{
-			scene->getPrimitive((int)i,_primitives[i]._primitive,_primitives[i]._material);
-
-			assert( _primitives[i]._material < (int)_materials.size() );
-			
-			Vector3 A = _primitives[i]._primitive.point(0);
-			Vector3 AB = _primitives[i]._primitive.point(1) - _primitives[i]._primitive.point(0);
-			Vector3 AC = _primitives[i]._primitive.point(2) - _primitives[i]._primitive.point(0);
-
-			_primitives[i]._normal = AB.cross(AC).normalized();
-		}
 
 		_sampleData = &sampleData;
 		_rayData = &rayData;
@@ -266,11 +192,6 @@ template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlo
 		return true;
 	}
 
-	inline Vector3 getBackgroundColor(const Vector3& direction)
-	{
-		return direction*.5f + Vector3(.5f,.5f,.5f);
-	}
-
 	inline void processPath(Path& path,size_t threadId)
 	{
 		ThreadData& threadDataRead = _threads[path._threadId];
@@ -310,6 +231,7 @@ template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlo
 			pathWrite.pushElement(newPath,threadId);
 		}
 	}
+
 	inline void completePathDirectLight(Path& path,const DirectNodeArray& directNodeRead)
 	{
 		Vector3 colorChange(0.0f,0.0f,0.0f);
@@ -332,7 +254,7 @@ template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlo
 
 			// direct lighting (added next step)
 
-			for(auto il = Lights.begin(); il != Lights.end(); ++il)
+			for(auto il = _lights.begin(); il != _lights.end(); ++il)
 			{
 				Vector3 color;
 				CalculateLighting( *il, node, color);
@@ -353,11 +275,6 @@ template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlo
 			}
 
 			// reflected
-			
-			Vector3 reflectFactor = (material._specularReflect * material._mirrorColor.array() * node._filter.array());
-			
-
-			if(reflectFactor.squaredNorm() > 0.0001f )
 			{
 				Vector3 reflected = 2.0f*primitive._normal.dot(node._parentDir)*primitive._normal - node._parentDir;
 
@@ -367,27 +284,29 @@ template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlo
 				reflectedRay.setOrigin( node._intersectionAbsolute );
 				reflectedRay.setDirection( reflected );
 				reflectedRay.setLength( -1 );
+				
+				Vector3 reflectFactor = GetReflectedFactor(material,primitive,reflected,node._parentDir) * node._filter.array();
+				
+				if(reflectFactor.squaredNorm() >= Epsilon)
+				{
+					indirectNodeWrite.push_back(IndirectNode());
+					IndirectNode& newNode = indirectNodeWrite.back();
+					newNode._filter = reflectFactor;
+					newNode._parentDir = - reflected;
 
-				indirectNodeWrite.push_back(IndirectNode());
-				IndirectNode& newNode = indirectNodeWrite.back();
-				newNode._filter = reflectFactor;
-				newNode._parentDir = - reflected;
-
-				_rayData->pushRay(
-					threadId,
-					reflectedRay,
-					&newNode._intersectionAbsolute,
-					nullptr,
-					&newNode._intersectionRelative,
-					&newNode._id
-					);
+					_rayData->pushRay(
+						threadId,
+						reflectedRay,
+						&newNode._intersectionAbsolute,
+						nullptr,
+						&newNode._intersectionRelative,
+						&newNode._id
+						);
+				}
 			}
 
 			
 			// refracted
-
-			Vector3 refractFactor = (material._transparency * material._color.array() * node._filter.array());
-			if(refractFactor.squaredNorm() > 0.0001f )
 			{
 				Real n;
 				
@@ -411,25 +330,30 @@ template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlo
 						refracted = (-n*cosTheta1 - cosTheta2 ) * primitive._normal - n * node._parentDir ;
 
 					refracted.normalize();
+					
+					Vector3 refractFactor = GetReflectedFactor(material,primitive,refracted,node._parentDir)  * node._filter.array();
 
-					RayType refractedRay;
-					refractedRay.setOrigin( node._intersectionAbsolute );
-					refractedRay.setDirection( refracted );
-					refractedRay.setLength( -1 );
+					if(refractFactor.squaredNorm() >= Epsilon)
+					{
+						RayType refractedRay;
+						refractedRay.setOrigin( node._intersectionAbsolute );
+						refractedRay.setDirection( refracted );
+						refractedRay.setLength( -1 );
 
-					indirectNodeWrite.push_back(IndirectNode());
-					IndirectNode& newNode = indirectNodeWrite.back();
-					newNode._filter = refractFactor;
-					newNode._parentDir = - refracted;
+						indirectNodeWrite.push_back(IndirectNode());
+						IndirectNode& newNode = indirectNodeWrite.back();
+						newNode._filter = refractFactor;
+						newNode._parentDir = - refracted;
 
-					_rayData->pushRay(
-						threadId,
-						refractedRay,
-						&newNode._intersectionAbsolute,
-						nullptr,
-						&newNode._intersectionRelative,
-						&newNode._id
-						);
+						_rayData->pushRay(
+							threadId,
+							refractedRay,
+							&newNode._intersectionAbsolute,
+							nullptr,
+							&newNode._intersectionRelative,
+							&newNode._id
+							);
+					}
 
 				}
 			}
@@ -457,15 +381,16 @@ template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlo
 		Real lightDistance = lightDir.squaredNorm();
 		lightDir.normalize();
 
+		color = GetReflectedFactor(material,primitive,lightDir,node._parentDir) * node._filter.array();
+			/*
 		Real diffuseFactor = std::min<Real>(1.0f,std::max<Real>(0.0f,lightDir.dot( primitive._normal ))) * material._diffuseReflect;
-
 
 		Vector3 half = (lightDir + node._parentDir).normalized();
 
 		Real specularFactor = powf( std::min<Real>(1.0f,std::max<Real>(0.0f,half.dot( primitive._normal ))), 25.0f ) * material._specularReflect;
 		
 
-		color = ((diffuseFactor*material._color + specularFactor*material._mirrorColor).array() * light._color.array() * node._filter.array()).matrix();
+		color = ((diffuseFactor*material._color + specularFactor*material._mirrorColor).array() * light._color.array() * node._filter.array()).matrix();*/
 	}
 
 	SampleData*						_sampleData;
@@ -473,8 +398,6 @@ template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlo
 	FisheyeCamera<RayType>			_camera;
 	std::vector<ThreadData>			_threads;
 	std::array<PathsArrayType,2>	_pathArrays;
-	std::vector<PrimitiveData>		_primitives;
-	std::vector<MaterialSettings>	_materials;
 	size_t							_readPathArray;
 	size_t							_writePathArray;
 

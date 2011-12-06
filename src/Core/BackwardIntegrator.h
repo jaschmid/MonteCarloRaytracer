@@ -20,34 +20,16 @@
 #define RAYTRACE_BACKWARD_INTEGRATOR_GUARD
 
 #include <RaytraceCommon.h>
-#include "EngineBase.h"
-#include "RayData.h"
-#include "SampleData.h"
-#include "SceneReader.h"
-#include "IIntegrator.h"
-#include "SplitUseWorkQueue.h"
-#include "chunk_vector.h"
-#include "FisheyeCamera.h"
+#include "IntegratorBase.h"
+#include "static_vector.h"
+
 
 namespace Raytrace {
 	
-struct Light
+template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlock> struct BackwardIntegrator : public IntegratorBase<_SampleData,_RayData,_SceneReader>
 {
-	Light(const Vector3& l,const Vector3& c) : _location(l), _color(c) {}
-	Vector3					_location;
-	Vector3					_color;
-};
+	typedef Eigen::Array<Real,3,1> ColorArray;
 
-static const std::array<Light,3> Lights = { 
-	Light( Vector3(0.0f,.8f,1.0f) , Vector3(.5f,.5f,.5f) ),
-	Light( Vector3(.5f,.8f,1.0f) , Vector3(.5f,.5f,.5f) ),
-	Light( Vector3(0.0f,.5f,1.0f) , Vector3(.5f,.5f,.5f) )
-};
-
-static const Real Epsilon = 0.001f;
-
-template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlock> struct BackwardIntegrator : public IIntegrator<_SampleData,_RayData,_SceneReader>
-{
 	typedef _SampleData SampleData;
 	typedef _RayData RayData;
 	typedef _SceneReader SceneReader;
@@ -63,62 +45,56 @@ template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlo
 	static const size_t ChunkSize = 8*1024;
 
 	static const size_t NumPathsPerBlock = _NumPathsPerBlock;
-
-	struct IndirectNode
-	{
-		Vector3					_parentDir;
-		IntersectionRelative	_intersectionRelative;
-		PrimitiveIdentifier		_id;
-		IntersectionAbsolute	_intersectionAbsolute;
-		Vector3					_filter;
-	};
-
+	
 	struct DirectNode
 	{
 		u32						_shadow;
-		Vector3					_color;
+		ColorArray				_color;
 	};
 
 	struct Path
 	{
 		typename SampleData::SampleInput		_sample;
-		Vector3						_color;
-		size_t						_threadId;
 
-		size_t						_firstIndirect;
-		size_t						_numIndirect;
-		size_t						_firstDirect;
-		size_t						_numDirect;
+		// some info
+
+		size_t									_threadId;
+		size_t									_firstDirect;
+		size_t									_numDirect;
+
+		// Intersection
+
+		IntersectionRelative					_intersectionRelative;
+		PrimitiveIdentifier						_id;
+		IntersectionAbsolute					_intersectionAbsolute;
+		
+		// Rendering
+
+		ColorArray								_accumulatedRadiance;
+
+		Vector3									_parentDir;
+		ColorArray								_pdf;
+		Real									_cumulativeRoulette;
+		Real									_rouletteThreshold;
+	};
+	
+	
+	static const size_t MaxEstimators = 4;
+	
+	struct Estimator
+	{
+		Vector3		_v;
+		ColorArray	_factor;
+		Real		_weight;
+		Real		_pdf;
+		Real		_pdfSum;
 	};
 
 	typedef chunked_vector<DirectNode,ChunkSize> DirectNodeArray;
-	typedef chunked_vector<IndirectNode,ChunkSize> IndirectNodeArray;
 	
 	struct ThreadData
 	{
 		std::array<DirectNodeArray,2>	_directNodes;
-		std::array<IndirectNodeArray,2> _indirectNodes;
-	};
-
-	struct PrimitiveData
-	{
-		int			_material;
-		Vector3		_normal;
-		PrimitiveType _primitive;
-	};
-
-	struct MaterialSettings
-	{
-		Vector3	_color;
-		Vector3 _mirrorColor;
-
-		Real	_diffuseReflect;
-		Real	_specularReflect;
-		Real	_emit;
-		
-		Real	_indexOfRefraction;
-		Real	_translucency;
-		Real	_transparency;
 	};
 
 	typedef SplitUseWorkQueue<Path,NumPathsPerBlock> PathsArrayType;
@@ -131,44 +107,13 @@ template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlo
 	
 	void InitializePrepareST(size_t numThreads,const SceneReader& scene,SampleData& sampleData,RayData& rayData) 
 	{
-		PrimitiveType dummy;
-
-		_primitives.resize(scene->getNumPrimitives());
-		_materials.resize(scene->getNumMaterials());
+		InitializeSceneData(scene);
+		
 		_threads.resize(numThreads);
 		_pathArrays[_readPathArray].prepare(numThreads);
 		_pathArrays[_writePathArray].prepare(numThreads);
 
 		_camera.Initialize( Vector2(.75f,.75f));
-
-		for(size_t i = 0; i < _materials.size(); ++i)
-		{
-			Material mat = scene->getMaterial((int)i);
-
-			_materials[i]._color = mat->GetColor().head<3>();
-			_materials[i]._mirrorColor = mat->GetMirrorColor().head<3>();
-			_materials[i]._diffuseReflect = mat->GetDiffuseReflect();
-			_materials[i]._specularReflect = mat->GetSpecularReflect();
-			_materials[i]._emit = mat->GetEmit();
-			_materials[i]._indexOfRefraction = mat->GetIOR();
-			_materials[i]._translucency = mat->GetTranslucency();
-			_materials[i]._transparency = mat->GetTransparency();
-
-		}
-
-		for(size_t i = 0; i < _primitives.size(); ++i)
-		{
-			scene->getPrimitive((int)i,_primitives[i]._primitive,_primitives[i]._material);
-
-			assert( _primitives[i]._material < (int)_materials.size() );
-			
-			Vector3 A = _primitives[i]._primitive.point(0);
-			Vector3 AB = _primitives[i]._primitive.point(1) - _primitives[i]._primitive.point(0);
-			Vector3 AC = _primitives[i]._primitive.point(2) - _primitives[i]._primitive.point(0);
-
-			_primitives[i]._normal = AB.cross(AC).normalized();
-		}
-
 		_sampleData = &sampleData;
 		_rayData = &rayData;
 	}
@@ -187,52 +132,46 @@ template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlo
 	{
 
 		ThreadData& threadDataWrite = _threads[threadId];
-		IndirectNodeArray& indirectNodeWrite = threadDataWrite._indirectNodes[_writePathArray];
 		DirectNodeArray& directNodeWrite = threadDataWrite._directNodes[_writePathArray];
 
 		
 		typename SampleData::SampleInput newSample;
 
-		indirectNodeWrite.clear();
 		directNodeWrite.clear();
 
 		// process new samples
 
 		while(_sampleData->popGeneratedSample(threadId,newSample))
 		{
-			Path newPath;
-
 			PathsArrayType& pathWrite = _pathArrays[_writePathArray];
 
 			// create a new indirect node
 			RayType cameraRay = _camera( _sampleData->getSampleValueImageXY(newSample,threadId));
 
-			size_t nodeId = indirectNodeWrite.size();
-			indirectNodeWrite.push_back(IndirectNode());
-			IndirectNode& node = indirectNodeWrite.back();
-			node._filter = Vector3( 1.0f, 1.0f, 1.0f);
-			node._parentDir = - cameraRay.direction();
+
+			// create a new sample
+			
+			pathWrite.pushElement(Path(),threadId);
+			Path* path = pathWrite.lastWriteElement(threadId);
 
 			_rayData->pushRay(
 				threadId,
 				cameraRay,
-				&node._intersectionAbsolute,
+				&path->_intersectionAbsolute,
 				nullptr,
-				&node._intersectionRelative,
-				&node._id
+				&path->_intersectionRelative,
+				&path->_id
 				);
-
-			// create a new sample
-
-			newPath._sample = newSample;
-			newPath._color = Vector3(0.0f,0.0f,0.0f);
-			newPath._threadId = threadId;
-			newPath._firstIndirect = nodeId;
-			newPath._numIndirect = 1;
-			newPath._firstDirect = -1;
-			newPath._numDirect = 0;
-
-			pathWrite.pushElement(newPath,threadId);
+			
+			path->_accumulatedRadiance = ColorArray(0.0f,0.0f,0.0f);
+			path->_sample = newSample;
+			path->_threadId = threadId;
+			path->_firstDirect = -1;
+			path->_numDirect = 0;
+			path->_parentDir = -cameraRay.direction();
+			path->_pdf = ColorArray(1.0f,1.0f,1.0f);
+			path->_cumulativeRoulette = 1.0f;
+			path->_rouletteThreshold = _sampleData->getSampleValueMisc(path->_sample,threadId);
 		}
 
 
@@ -264,206 +203,383 @@ template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlo
 		return true;
 	}
 
-	inline Vector3 getBackgroundColor(const Vector3& direction)
+	inline void processPath(Path& oldPath,size_t threadId)
 	{
-		return direction*.5f + Vector3(.5f,.5f,.5f);
-	}
+		static const Real SphereArea = (4.0f*M_PI);
+		static const Real Epsilon = 0.00001f;
 
-	inline void processPath(Path& path,size_t threadId)
-	{
-		ThreadData& threadDataRead = _threads[path._threadId];
-		ThreadData& threadDataWrite = _threads[threadId];
 		PathsArrayType& pathWrite = _pathArrays[_writePathArray];
-		
-		IndirectNodeArray& indirectNodeWrite = threadDataWrite._indirectNodes[_writePathArray];
-		DirectNodeArray& directNodeWrite = threadDataWrite._directNodes[_writePathArray];
-
-		const IndirectNodeArray& indirectNodeRead = threadDataRead._indirectNodes[_readPathArray];
+		ThreadData& threadDataWrite = _threads[threadId];
+		ThreadData& threadDataRead = _threads[oldPath._threadId];
 		const DirectNodeArray& directNodeRead = threadDataRead._directNodes[_readPathArray];
+		
+		GatherPathDirectLight(oldPath,directNodeRead);
+		GatherPathEmissive(oldPath);
 
-		if(path._numIndirect ==0)
+		// decide if we integrate further
+
+		if( (oldPath._cumulativeRoulette <= oldPath._rouletteThreshold) || (oldPath._id == -1) || (oldPath._pdf[0] <= Epsilon && oldPath._pdf[1] <= Epsilon && oldPath._pdf[2] <= Epsilon) )
 		{
-			completePathDirectLight(path,directNodeRead);
-			_sampleData->pushCompletedSample( threadId, typename SampleData::SampleOutput( path._sample, path._color) );
+			// was emitted
+			completePath(oldPath,threadId);
+			return;
 		}
 		else
 		{
-			completePathDirectLight(path,directNodeRead);
-			Path newPath;
+			Path* newPath = &oldPath;
+			newPath->_numDirect = 0;
+			DirectNodeArray& directNodeWrite = threadDataWrite._directNodes[_writePathArray];
+			
+				/*
+			assert(newPath->_pdf.x() >= 0.0f);
+			assert(newPath->_pdf.y() >= 0.0f);
+			assert(newPath->_pdf.z() >= 0.0f);
+			*/
+			newPath->_threadId = threadId;
 
-			newPath._sample = path._sample;
-			newPath._color = path._color;
-			newPath._threadId = threadId;
-			newPath._firstIndirect = indirectNodeWrite.size();
-			newPath._firstDirect = directNodeWrite.size();
-
-			const size_t end = path._firstIndirect + path._numIndirect;
-
-			for(size_t i = path._firstIndirect; i < end; ++i)
-				newPath._color += createNodeChildren(threadId,indirectNodeRead[i],indirectNodeWrite,directNodeWrite);
-				
-			newPath._numIndirect = indirectNodeWrite.size() - newPath._firstIndirect;
-			newPath._numDirect = directNodeWrite.size() - newPath._firstDirect;
-				
-			pathWrite.pushElement(newPath,threadId);
-		}
-	}
-	inline void completePathDirectLight(Path& path,const DirectNodeArray& directNodeRead)
-	{
-		Vector3 colorChange(0.0f,0.0f,0.0f);
-
-		size_t end = path._firstDirect + path._numDirect;
-
-		for(size_t i = path._firstDirect; i < end; ++i)
-			if(!directNodeRead[i]._shadow)
-				colorChange += directNodeRead[i]._color;
-
-		path._color += colorChange;
-	}
-	
-	inline Vector3 createNodeChildren(size_t threadId,const IndirectNode& node,IndirectNodeArray& indirectNodeWrite,DirectNodeArray& directNodeWrite)
-	{
-		if(node._id != -1)
-		{
-			const PrimitiveData& primitive = _primitives[node._id];
+			GeneratePathDirectLight(*newPath,directNodeWrite);
+				/*
+			assert(newPath->_pdf.x() >= 0.0f);
+			assert(newPath->_pdf.y() >= 0.0f);
+			assert(newPath->_pdf.z() >= 0.0f);
+			*/
+			//newPath->_pdf /= SphereArea;//normalize integral
+			
+			const PrimitiveData& primitive = _primitives[newPath->_id];
 			const MaterialSettings& material = _materials[primitive._material];
 
-			// direct lighting (added next step)
+			ColorArray weightedAlbedo = Albedo(material,primitive,newPath->_parentDir)*newPath->_pdf;
+			
+			weightedAlbedo.x() = std::min(weightedAlbedo.x(),1.0f);
+			weightedAlbedo.y() = std::min(weightedAlbedo.y(),1.0f);
+			weightedAlbedo.z() = std::min(weightedAlbedo.z(),1.0f);
 
-			for(auto il = Lights.begin(); il != Lights.end(); ++il)
+			Real reflectionChance = std::min<Real>(1.0f,std::max<Real>(0.0f,std::max<Real>(std::max<Real>(weightedAlbedo.x(),weightedAlbedo.y()),weightedAlbedo.z()))); 
+
+			newPath->_cumulativeRoulette *= reflectionChance;
+
+			//assert(newPath->_rouletteThreshold >= 0.0f);
+
+			if(newPath->_cumulativeRoulette > newPath->_rouletteThreshold)
 			{
-				Vector3 color;
-				CalculateLighting( *il, node, color);
-				if(color.x() >= Epsilon || color.y() >= Epsilon || color.z() >= Epsilon)
+				Vector3 reflectedDir;
+				/*
+				assert(newPath->_pdf.x() >= 0.0f);
+				assert(newPath->_pdf.y() >= 0.0f);
+				assert(newPath->_pdf.z() >= 0.0f);*/
+
+				ColorArray  factor= GetReflectedRay(*newPath,threadId,reflectedDir);
+			
+				//newPath->_accumulatedRadiance = newPath->_pdf;
+				/*completePath(*newPath,threadId);
+				return;*/
+				/*
+				assert(pdf.x() >= 0.0f);
+				assert(pdf.y() >= 0.0f);
+				assert(pdf.z() >= 0.0f);*/
+
+				newPath->_parentDir = -reflectedDir;
+
+				//assert(reflectionChance > 0.0f);
+
+				Vector3 oldPDF = newPath->_pdf;
+
+				newPath->_pdf *= factor /reflectionChance;
+				
+				if(!( newPath->_pdf.x() >= 0.0f && newPath->_pdf.y() >= 0.0f && newPath->_pdf.z() >= 0.0f))
 				{
-					directNodeWrite.push_back(DirectNode());
-					DirectNode& direct = directNodeWrite.back();
-					direct._color = color;
-
-					RayType ray;
-							
-					ray.setOrigin( node._intersectionAbsolute);
-					ray.setDirection( (il->_location-node._intersectionAbsolute).normalized() );
-					ray.setLength( (il->_location-node._intersectionAbsolute).norm() );
-
-					_rayData->pushRay(threadId, ray, &direct._shadow);
+					char temp[512];
+					sprintf(temp,"oldPDF: %f/%f/%f \n newPDF: %f/%f/%f\n pdfMod: %f/%f/%f chance:%f\n",oldPDF.x(),oldPDF.y(),oldPDF.z(),newPath->_pdf.x(),newPath->_pdf.y(),newPath->_pdf.z(),factor.x(),factor.y(),factor.z(),reflectionChance);
+					MessageBoxA(NULL,temp,"FAIL",MB_OK);
 				}
-			}
-
-			// reflected
-			
-			Vector3 reflectFactor = (material._specularReflect * material._mirrorColor.array() * node._filter.array());
-			
-
-			if(reflectFactor.squaredNorm() > 0.0001f )
-			{
-				Vector3 reflected = 2.0f*primitive._normal.dot(node._parentDir)*primitive._normal - node._parentDir;
-
-				reflected.normalize();
-							
-				RayType reflectedRay;
-				reflectedRay.setOrigin( node._intersectionAbsolute );
-				reflectedRay.setDirection( reflected );
-				reflectedRay.setLength( -1 );
-
-				indirectNodeWrite.push_back(IndirectNode());
-				IndirectNode& newNode = indirectNodeWrite.back();
-				newNode._filter = reflectFactor;
-				newNode._parentDir = - reflected;
-
-				_rayData->pushRay(
-					threadId,
-					reflectedRay,
-					&newNode._intersectionAbsolute,
-					nullptr,
-					&newNode._intersectionRelative,
-					&newNode._id
-					);
-			}
-
-			
-			// refracted
-
-			Vector3 refractFactor = (material._transparency * material._color.array() * node._filter.array());
-			if(refractFactor.squaredNorm() > 0.0001f )
-			{
-				Real n;
 				
-				Real cosTheta1 = primitive._normal.dot(node._parentDir);
-
-				if(primitive._normal.dot(node._parentDir) > 0.0f)
-					n = 1.0f/ material._indexOfRefraction;
-				else
-					n = material._indexOfRefraction;
-				
-				Real cosTheta2sq =  1.0f - n*n*(1.0f - cosTheta1*cosTheta1);
-
-				if(cosTheta2sq >= 0.0f)
+				if(newPath->_pdf[0] > Epsilon || newPath->_pdf[1] > Epsilon || newPath->_pdf[2] > Epsilon)
 				{
-					Real cosTheta2 = sqrtf(cosTheta2sq);
-					Vector3 refracted;
 					
-					if(cosTheta1 >= 0.0f)
-						refracted = (n*cosTheta1 - cosTheta2 ) * primitive._normal - n * node._parentDir ;
-					else
-						refracted = (-n*cosTheta1 - cosTheta2 ) * primitive._normal - n * node._parentDir ;
+					pathWrite.pushElement(*newPath,threadId);
+					newPath = pathWrite.lastWriteElement(threadId);
 
-					refracted.normalize();
+					RayType reflectedRay;
 
-					RayType refractedRay;
-					refractedRay.setOrigin( node._intersectionAbsolute );
-					refractedRay.setDirection( refracted );
-					refractedRay.setLength( -1 );
-
-					indirectNodeWrite.push_back(IndirectNode());
-					IndirectNode& newNode = indirectNodeWrite.back();
-					newNode._filter = refractFactor;
-					newNode._parentDir = - refracted;
+					reflectedRay.setOrigin(newPath->_intersectionAbsolute);
+					reflectedRay.setDirection(reflectedDir);
+					reflectedRay.setLength(-1.0f);
 
 					_rayData->pushRay(
 						threadId,
-						refractedRay,
-						&newNode._intersectionAbsolute,
+						reflectedRay,
+						&newPath->_intersectionAbsolute,
 						nullptr,
-						&newNode._intersectionRelative,
-						&newNode._id
+						&newPath->_intersectionRelative,
+						&newPath->_id
 						);
-
+					return;
 				}
 			}
-						
-			// emitted
 
-			return Vector3(material._color.array() * node._filter.array() * material._emit);
+			if(newPath->_numDirect != 0)
+				pathWrite.pushElement(*newPath,threadId);
+			else
+				completePath(*newPath,threadId);
+		}
+	}
+
+	inline void completePath(const Path& path,size_t threadId)
+	{
+		_sampleData->pushCompletedSample( threadId, typename SampleData::SampleOutput( path._sample, path._accumulatedRadiance) );
+	}
+
+
+	inline ColorArray GetReflectedRay(Path& path,size_t threadId,Vector3& reflected)
+	{
+
+		// get estimators
+		
+		static_vector<Estimator,MaxEstimators> estimators;
+
+		generateEstimators(path,estimators);
+
+		// chose estimator
+				
+		Real random = _sampleData->getSampleValueMisc(path._sample,threadId);
+
+		ColorArray chosenFactor;
+		bool found = false;
+
+		for(auto it = estimators.begin(); it != estimators.end(); ++it)
+		{
+			
+			if(random < it->_weight)
+			{
+				if(it->_pdf)
+					chosenFactor = it->_factor/it->_pdf;
+				else
+					chosenFactor = ColorArray(0.0f,0.0f,0.0f);
+				//path._accumulatedRadiance = it->_debug;
+				reflected = it->_v;
+				found = true;
+				break;
+			}
+			else
+				random -= it->_weight;
+		}
+		if(!found)
+			chosenFactor = ColorArray(0.0f,0.0f,0.0f);
+
+		
+		
+		return chosenFactor;
+	}
+				
+	
+	inline void GatherPathEmissive(Path& path)
+	{
+		if(path._id != -1)
+		{
+			const PrimitiveData& primitive = _primitives[path._id];
+			const MaterialSettings& material = _materials[primitive._material];
+			
+			// emitted light by the object itself
+			path._accumulatedRadiance += material._color * material._emit * path._pdf;
+
 		}
 		else
-			return getBackgroundColor(-node._parentDir);
+		{
+			// left scene, emissive = environment
+			path._accumulatedRadiance += path._pdf * getBackgroundColor(-path._parentDir);
+		}
+
+	}
+
+	inline void GeneratePathDirectLight(Path& path,DirectNodeArray& directNodeWrite)
+	{
+		const PrimitiveData& primitive = _primitives[path._id];
+		const MaterialSettings& material = _materials[primitive._material];
+
+		// direct lighting (added next step)
+		path._firstDirect = directNodeWrite.size();
+		for(auto il = _lights.begin(); il != _lights.end(); ++il)
+		{
+			Vector3 toLight = (il->_location - path._intersectionAbsolute);
+
+			Real lightDistanceSq = toLight.squaredNorm();
+
+			Real lightArea = lightDistanceSq*4*M_PI;
+
+			toLight /= sqrtf(lightDistanceSq);
+
+
+			ColorArray lightPDF = GetReflectedFactor(material,primitive,toLight,path._parentDir) * il->_color.array() * path._pdf / lightArea;
+					
+			if(lightPDF[0] >= Epsilon || lightPDF[1] >= Epsilon || lightPDF[2] >= Epsilon)
+			{
+				directNodeWrite.push_back(DirectNode());
+				DirectNode& direct = directNodeWrite.back();
+				direct._color = lightPDF;
+
+				RayType ray;
+							
+				ray.setOrigin( path._intersectionAbsolute);
+				ray.setDirection( (il->_location-path._intersectionAbsolute).normalized() );
+				ray.setLength( (il->_location-path._intersectionAbsolute).norm() );
+
+				_rayData->pushRay(path._threadId, ray, &direct._shadow);
+			}
+		}
+
+		path._numDirect = directNodeWrite.size() - path._firstDirect;
+
+	}
+
+	inline void GatherPathDirectLight(Path& path,const DirectNodeArray& directNodeRead)
+	{
+		if(path._numDirect)
+		{
+			size_t end = path._firstDirect + path._numDirect;
+
+			for(size_t i = path._firstDirect; i < end; ++i)
+				if(!directNodeRead[i]._shadow)
+					path._accumulatedRadiance +=  directNodeRead[i]._color;
+
+		}
 	}
 	
-	inline void CalculateLighting( const Light& light, const IndirectNode& node, Vector3& color)
+
+	inline void generateEstimators(Path& path,static_vector<Estimator,MaxEstimators>& out)
 	{
-		const PrimitiveData& primitive = _primitives[node._id];
+		const PrimitiveData& primitive = _primitives[path._id];
 		const MaterialSettings& material = _materials[primitive._material];
+		const Vector3& toViewer = path._parentDir;
+		const Vector3& normal = primitive._normal;
+		Vector3 yTangent = path._parentDir.cross(normal).normalized();
+	
+		if(yTangent.squaredNorm() != 0.0f)
+			yTangent.normalize();
+		else
+		{
+			yTangent = path._parentDir.cross(Vector3(1.0f,0.0f,0.0f));
+			if(yTangent.squaredNorm() != 0.0f)
+				yTangent.normalize();
+			else
+				yTangent = path._parentDir.cross(Vector3(0.0f,1.0f,0.0f)).normalized();
+		}
 		
-		Real remainder = 1.0f-node._intersectionRelative.x()-node._intersectionRelative.y();
+		// random values
+		Vector2 uv = _sampleData->getSampleValueMisc2D(path._sample,path._threadId);
 
-		Vector3 location = primitive._primitive.point(0) * remainder + primitive._primitive.point(1) * node._intersectionRelative.x() + primitive._primitive.point(2) * node._intersectionRelative.y();
+		// variables
+		Vector3 xTangent = yTangent.cross(normal).normalized();
+		Vector3 xTangentSpecular;
+		Vector3 xTangentRefracted;
+		Vector3 vSpec;
+		Vector3 vRef;
+		Estimator e;
 
-		Vector3 lightDir(light._location-location);
-
-
-		Real lightDistance = lightDir.squaredNorm();
-		lightDir.normalize();
-
-		Real diffuseFactor = std::min<Real>(1.0f,std::max<Real>(0.0f,lightDir.dot( primitive._normal ))) * material._diffuseReflect;
-
-
-		Vector3 half = (lightDir + node._parentDir).normalized();
-
-		Real specularFactor = powf( std::min<Real>(1.0f,std::max<Real>(0.0f,half.dot( primitive._normal ))), 25.0f ) * material._specularReflect;
+		bool hasDiffuse = false,hasReflect = false,hasTransparent=false,hasFallback=false;
 		
+		if(material._diffuseReflect > 0.0f)
+		{
+			e._pdf = cosineWeightedHemisphere(uv,xTangent,yTangent,normal,e._v);
+			//e._debug = ColorArray(1.0f,0.0f,0.0f);
+			hasDiffuse = true;
+			e._weight =material._diffuseReflect;
+			out.push_back(e);
+		}		
+		if(material._specularReflect > 0.0f && GetSpecularDirection(toViewer,primitive._normal,vSpec))
+		{		
+			xTangentSpecular = yTangent.cross(vSpec).normalized();
 
-		color = ((diffuseFactor*material._color + specularFactor*material._mirrorColor).array() * light._color.array() * node._filter.array()).matrix();
+			e._pdf = cosineWeightedLobe(uv,xTangentSpecular,yTangent,vSpec,material._specularPower,e._v);
+			//e._debug = ColorArray(0.0f,1.0f,0.0f);
+			hasReflect = true;
+			e._weight =material._specularReflect;
+			out.push_back(e);
+		}		
+		if(material._transparency > 0.0f &&GetRefractedDirection(toViewer,primitive._normal,material._indexOfRefraction,vRef))
+		{
+			xTangentRefracted = yTangent.cross(vRef).normalized();
+
+			e._pdf = cosineWeightedLobe(uv,xTangentRefracted,yTangent,vRef,material._refractionPower,e._v);
+			//e._debug = ColorArray(0.0f,0.0f,1.0f);
+			hasTransparent = true;
+			e._weight =material._transparency;
+			out.push_back(e);
+		}
+		{
+			//fallback
+			e._pdf = uniformSphere(uv,xTangent,yTangent,normal,e._v);
+			//e._debug = ColorArray(0.5f,0.5f,.5f);
+			hasFallback = true;
+			e._weight = 0.1f;
+			out.push_back(e);
+		} 
+		
+		//calculate weights
+
+		Real weightSum= 0.0f;
+
+		for(auto it = out.begin(); it != out.end(); ++it)
+		{
+			it->_factor = GetReflectedFactor(material,primitive,it->_v,toViewer);
+			Real max_factor = std::max(std::max(it->_factor.x(),it->_factor.y()),it->_factor.z());
+			it->_factor *=  it->_pdf;
+			it->_weight=max_factor;//*it->_pdf;
+			weightSum += it->_weight;
+		}
+		
+		//normalize weights
+		if(weightSum <= 0.0f)
+		{
+			//if something goes wrong use fallback sphere
+			out.back()._weight = 1.0f;
+		}
+		else
+			for(auto it = out.begin(); it != out.end(); ++it)
+			{
+				it->_weight /= weightSum;
+				it->_pdf *= it->_weight;
+			}
+
+		// calculate pdf's
+			
+		size_t iOut = 0;
+		if(hasDiffuse)
+		{
+			Real pdfSum = 0.0f;
+			for(auto it = out.begin(); it != out.end(); ++it)
+				if(it - out.begin() != iOut)
+					it->_pdf+= pdfAtCosineWeightedHemisphere(xTangent,yTangent,normal,it->_v)*out[iOut]._weight;
+
+			++iOut;
+		}
+		if(hasReflect)
+		{
+			Real pdfSum = 0.0f;
+			for(auto it = out.begin(); it != out.end(); ++it)
+				if(it - out.begin() != iOut)
+					it->_pdf+= pdfAtCosineWeightedLobe(xTangentSpecular,yTangent,vSpec,material._specularPower,it->_v)*out[iOut]._weight;
+
+			++iOut;
+		}
+		if(hasTransparent)
+		{
+			Real pdfSum = 0.0f;
+			for(auto it = out.begin(); it != out.end(); ++it)
+				if(it - out.begin() != iOut)
+					it->_pdf+= pdfAtCosineWeightedLobe(xTangentRefracted,yTangent,vRef,material._refractionPower,it->_v)*out[iOut]._weight;
+
+			++iOut;
+		}
+		if(hasFallback)
+		{
+			Real pdfSum = 0.0f;
+			for(auto it = out.begin(); it != out.end(); ++it)
+				if(it - out.begin() != iOut)
+					it->_pdf+= pdfAtUniformSphere(xTangent,yTangent,normal,it->_v)*out[iOut]._weight;
+
+			++iOut;
+		}
+
 	}
 
 	SampleData*						_sampleData;
@@ -471,8 +587,6 @@ template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlo
 	FisheyeCamera<RayType>			_camera;
 	std::vector<ThreadData>			_threads;
 	std::array<PathsArrayType,2>	_pathArrays;
-	std::vector<PrimitiveData>		_primitives;
-	std::vector<MaterialSettings>	_materials;
 	size_t							_readPathArray;
 	size_t							_writePathArray;
 

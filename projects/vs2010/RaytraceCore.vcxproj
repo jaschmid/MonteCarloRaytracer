@@ -43,9 +43,11 @@
     <ClInclude Include="..\..\src\Core\IEngine.h" />
     <ClInclude Include="..\..\src\Core\IIntersector.h" />
     <ClInclude Include="..\..\src\core\ImageWriter.h" />
+    <ClInclude Include="..\..\src\Core\IntegratorBase.h" />
     <ClInclude Include="..\..\src\Core\IntersectorBase.h" />
     <ClInclude Include="..\..\src\Core\ISampler.h" />
     <ClInclude Include="..\..\src\Core\IIntegrator.h" />
+    <ClInclude Include="..\..\src\Core\SobolSampler.h" />
     <ClInclude Include="..\..\src\core\MaterialImp.h" />
     <ClInclude Include="..\..\src\core\MathHelper.h" />
     <ClInclude Include="..\..\src\Core\MCSampler.h" />
@@ -60,6 +62,7 @@
     <ClInclude Include="..\..\src\core\RayData.h" />
     <ClInclude Include="..\..\src\Core\RayTriangleIntersection.h" />
     <ClInclude Include="..\..\src\Core\SampleData.h" />
+    <ClInclude Include="..\..\src\Core\SamplerBase.h" />
     <ClInclude Include="..\..\src\core\SceneImp.h" />
     <ClInclude Include="..\..\src\core\SceneReader.h" />
     <ClInclude Include="..\..\src\core\SimpleIntersector.h" />
@@ -126,6 +129,7 @@
     <ClCompile Include="..\..\src\core\ResultDefinitions.cpp" />
     <ClCompile Include="..\..\src\core\SceneImp.cpp" />
     <ClCompile Include="..\..\src\Core\SimpleIntersector.cpp" />
+    <ClCompile Include="..\..\src\Core\SobolSampler.cpp" />
     <ClCompile Include="..\..\src\core\TriMeshImp.cpp" />
     <ClCompile Include="..\..\src\Core\WhittedIntegrator.cpp" />
     <ClCompile Include="..\..\src\core\XmlParserImp.cpp" />
@@ -289,6 +293,9 @@
       <PreprocessorDefinitions>EIGEN_DONT_ALIGN;NOMINMAX;WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>headers.h</PrecompiledHeaderFile>
       <StructMemberAlignment>Default</StructMemberAlignment>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -381,7 +388,7 @@
       <FloatingPointExpressionEvaluation>Source</FloatingPointExpressionEvaluation>
       <OpenMP>GenerateParallelCode</OpenMP>
       <Cpp0xSupport>true</Cpp0xSupport>
-      <StructMemberAlignment>16Bytes</StructMemberAlignment>
+      <StructMemberAlignment>Default</StructMemberAlignment>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

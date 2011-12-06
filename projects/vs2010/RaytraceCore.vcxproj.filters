@@ -267,6 +267,15 @@
     <ClInclude Include="..\..\src\core\EngineBase.h">
       <Filter>Header Files\Core\Engines</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\Core\IntegratorBase.h">
+      <Filter>Header Files\Core\SurfaceIntegrators</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Core\SamplerBase.h">
+      <Filter>Header Files\Core\Samplers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Core\SobolSampler.h">
+      <Filter>Header Files\Core\Samplers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\core\ResultDefinitions.cpp">
@@ -328,6 +337,9 @@
     </ClCompile>
     <ClCompile Include="..\..\src\Core\BackwardIntegrator.cpp">
       <Filter>Source Files\Engine\Integrators</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Core\SobolSampler.cpp">
+      <Filter>Source Files\Engine\Samplers</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
