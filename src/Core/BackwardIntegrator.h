@@ -73,7 +73,7 @@ template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlo
 		ColorArray								_accumulatedRadiance;
 
 		Vector3									_parentDir;
-		ColorArray								_pdf;
+		ColorArray								_importance;
 		Real									_cumulativeRoulette;
 		Real									_rouletteThreshold;
 	};
@@ -88,6 +88,7 @@ template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlo
 		Real		_weight;
 		Real		_pdf;
 		Real		_pdfSum;
+		Real		_c;
 	};
 
 	typedef chunked_vector<DirectNode,ChunkSize> DirectNodeArray;
@@ -169,7 +170,7 @@ template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlo
 			path->_firstDirect = -1;
 			path->_numDirect = 0;
 			path->_parentDir = -cameraRay.direction();
-			path->_pdf = ColorArray(1.0f,1.0f,1.0f);
+			path->_importance = ColorArray(1.0f,1.0f,1.0f);
 			path->_cumulativeRoulette = 1.0f;
 			path->_rouletteThreshold = _sampleData->getSampleValueMisc(path->_sample,threadId);
 		}
@@ -218,7 +219,7 @@ template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlo
 
 		// decide if we integrate further
 
-		if( (oldPath._cumulativeRoulette <= oldPath._rouletteThreshold) || (oldPath._id == -1) || (oldPath._pdf[0] <= Epsilon && oldPath._pdf[1] <= Epsilon && oldPath._pdf[2] <= Epsilon) )
+		if( (oldPath._cumulativeRoulette <= oldPath._rouletteThreshold) || (oldPath._id == -1) || (oldPath._importance[0] <= Epsilon && oldPath._importance[1] <= Epsilon && oldPath._importance[2] <= Epsilon) )
 		{
 			// was emitted
 			completePath(oldPath,threadId);
@@ -231,28 +232,26 @@ template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlo
 			DirectNodeArray& directNodeWrite = threadDataWrite._directNodes[_writePathArray];
 			
 				/*
-			assert(newPath->_pdf.x() >= 0.0f);
-			assert(newPath->_pdf.y() >= 0.0f);
-			assert(newPath->_pdf.z() >= 0.0f);
+			assert(newPath->_importance.x() >= 0.0f);
+			assert(newPath->_importance.y() >= 0.0f);
+			assert(newPath->_importance.z() >= 0.0f);
 			*/
 			newPath->_threadId = threadId;
 
 			GeneratePathDirectLight(*newPath,directNodeWrite);
 				/*
-			assert(newPath->_pdf.x() >= 0.0f);
-			assert(newPath->_pdf.y() >= 0.0f);
-			assert(newPath->_pdf.z() >= 0.0f);
+			assert(newPath->_importance.x() < 1000.0f);
+			assert(newPath->_importance.y() < 1000.0f);
+			assert(newPath->_importance.z() < 1000.0f);
 			*/
-			//newPath->_pdf /= SphereArea;//normalize integral
-			
 			const PrimitiveData& primitive = _primitives[newPath->_id];
 			const MaterialSettings& material = _materials[primitive._material];
 
-			ColorArray weightedAlbedo = Albedo(material,primitive,newPath->_parentDir)*newPath->_pdf;
+			ColorArray weightedAlbedo = Albedo(material,primitive,newPath->_parentDir);
 			
-			weightedAlbedo.x() = std::min(weightedAlbedo.x(),1.0f);
-			weightedAlbedo.y() = std::min(weightedAlbedo.y(),1.0f);
-			weightedAlbedo.z() = std::min(weightedAlbedo.z(),1.0f);
+			weightedAlbedo.x() = std::min(weightedAlbedo.x(),newPath->_importance.x());
+			weightedAlbedo.y() = std::min(weightedAlbedo.y(),newPath->_importance.y());
+			weightedAlbedo.z() = std::min(weightedAlbedo.z(),newPath->_importance.z());
 
 			Real reflectionChance = std::min<Real>(1.0f,std::max<Real>(0.0f,std::max<Real>(std::max<Real>(weightedAlbedo.x(),weightedAlbedo.y()),weightedAlbedo.z()))); 
 
@@ -264,36 +263,34 @@ template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlo
 			{
 				Vector3 reflectedDir;
 				/*
-				assert(newPath->_pdf.x() >= 0.0f);
-				assert(newPath->_pdf.y() >= 0.0f);
-				assert(newPath->_pdf.z() >= 0.0f);*/
-
-				ColorArray  factor= GetReflectedRay(*newPath,threadId,reflectedDir);
+				assert(newPath->_importance.x() >= 0.0f);
+				assert(newPath->_importance.y() >= 0.0f);
+				assert(newPath->_importance.z() >= 0.0f);
+				*/
+				ColorArray  reflectedImportance= GetReflectedRay(*newPath,threadId,reflectedDir);
 			
+
 				//newPath->_accumulatedRadiance = newPath->_pdf;
 				/*completePath(*newPath,threadId);
 				return;*/
-				/*
-				assert(pdf.x() >= 0.0f);
-				assert(pdf.y() >= 0.0f);
-				assert(pdf.z() >= 0.0f);*/
 
 				newPath->_parentDir = -reflectedDir;
 
 				//assert(reflectionChance > 0.0f);
 
-				Vector3 oldPDF = newPath->_pdf;
+				Vector3 oldPDF = newPath->_importance;
 
-				newPath->_pdf *= factor /reflectionChance;
-				
-				if(!( newPath->_pdf.x() >= 0.0f && newPath->_pdf.y() >= 0.0f && newPath->_pdf.z() >= 0.0f))
+				newPath->_importance *= reflectedImportance /reflectionChance;
+				/*
+				if(!( newPath->_importance.x() >= 0.0f && newPath->_importance.y() >= 0.0f && newPath->_importance.z() >= 0.0f) ||
+					!( newPath->_importance.x() < 1000.0f && newPath->_importance.y() < 1000.0f && newPath->_importance.z() < 1000.0f))
 				{
 					char temp[512];
-					sprintf(temp,"oldPDF: %f/%f/%f \n newPDF: %f/%f/%f\n pdfMod: %f/%f/%f chance:%f\n",oldPDF.x(),oldPDF.y(),oldPDF.z(),newPath->_pdf.x(),newPath->_pdf.y(),newPath->_pdf.z(),factor.x(),factor.y(),factor.z(),reflectionChance);
+					sprintf(temp,"oldPDF: %f/%f/%f \n newPDF: %f/%f/%f\n pdfMod: %f/%f/%f chance:%f\n",oldPDF.x(),oldPDF.y(),oldPDF.z(),newPath->_importance.x(),newPath->_importance.y(),newPath->_importance.z(),reflectedImportance.x(),reflectedImportance.y(),reflectedImportance.z(),reflectionChance);
 					MessageBoxA(NULL,temp,"FAIL",MB_OK);
-				}
+				}*/
 				
-				if(newPath->_pdf[0] > Epsilon || newPath->_pdf[1] > Epsilon || newPath->_pdf[2] > Epsilon)
+				if(newPath->_importance[0] > Epsilon || newPath->_importance[1] > Epsilon || newPath->_importance[2] > Epsilon)
 				{
 					
 					pathWrite.pushElement(*newPath,threadId);
@@ -332,43 +329,137 @@ template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlo
 
 	inline ColorArray GetReflectedRay(Path& path,size_t threadId,Vector3& reflected)
 	{
-
-		// get estimators
 		
 		static_vector<Estimator,MaxEstimators> estimators;
+		const PrimitiveData& primitive = _primitives[path._id];
+		const MaterialSettings& material = _materials[primitive._material];
+		const Vector3& toViewer = path._parentDir;
+		const Vector3& normal = primitive._normal;
+		Vector3 yTangent = path._parentDir.cross(normal).normalized();
+	
+		if(yTangent.squaredNorm() != 0.0f)
+			yTangent.normalize();
+		else
+		{
+			yTangent = path._parentDir.cross(Vector3(1.0f,0.0f,0.0f));
+			if(yTangent.squaredNorm() != 0.0f)
+				yTangent.normalize();
+			else
+				yTangent = path._parentDir.cross(Vector3(0.0f,1.0f,0.0f)).normalized();
+		}
+		
+		// random values
+		Vector2 uv = _sampleData->getSampleValueMisc2D(path._sample,path._threadId);
+		Real random = _sampleData->getSampleValueMisc(path._sample,path._threadId);
 
-		generateEstimators(path,estimators);
+		// variables
+		Vector3 xTangent = yTangent.cross(normal).normalized();
+		Vector3 xTangentSpecular;
+		Vector3 xTangentRefracted;
+		Vector3 vSpec;
+		Vector3 vRef;
+		Estimator e;
 
-		// chose estimator
-				
-		Real random = _sampleData->getSampleValueMisc(path._sample,threadId);
+		Estimator* diffuse = nullptr,*reflect = nullptr,*transparent=nullptr,*fallback=nullptr;
+		
+		if(material._diffuseReflect > 0.0f)
+		{
+			e._pdf = cosineWeightedHemisphere(uv,xTangent,yTangent,normal,e._v);
+			//e._debug = ColorArray(1.0f,0.0f,0.0f);
+			e._weight =material._diffuseReflect;
+			estimators.push_back(e);
+			diffuse = &estimators.back();
+		}		
+		
+		if(material._specularReflect > 0.0f && GetSpecularDirection(toViewer,primitive._normal,vSpec))
+		{		
+			xTangentSpecular = yTangent.cross(vSpec).normalized();
 
-		ColorArray chosenFactor;
-		bool found = false;
+			e._pdf = cosineWeightedLobe(uv,xTangentSpecular,yTangent,vSpec,material._specularPower,e._v);
+			//e._debug = ColorArray(0.0f,1.0f,0.0f);
+			e._weight =material._specularReflect;
+			estimators.push_back(e);
+			reflect = &estimators.back();
+		}		
+		if(material._transparency > 0.0f &&GetRefractedDirection(toViewer,primitive._normal,material._indexOfRefraction,vRef))
+		{
+			xTangentRefracted = yTangent.cross(vRef).normalized();
+
+			e._pdf = cosineWeightedLobe(uv,xTangentRefracted,yTangent,vRef,material._refractionPower,e._v);
+			//e._debug = ColorArray(0.0f,0.0f,1.0f);
+			e._weight =material._transparency;
+			estimators.push_back(e);
+			transparent = &estimators.back();
+		}
+		
+		{
+			//fallback
+			e._pdf = uniformHemisphere(uv,xTangent,yTangent,normal,e._v);
+			//e._debug = ColorArray(0.5f,0.5f,.5f);
+			estimators.push_back(e);
+			fallback = &estimators.back();
+		} 
+		
+		//calculate weights
+
+		Real weightSum= 0.0f;
 
 		for(auto it = estimators.begin(); it != estimators.end(); ++it)
 		{
-			
-			if(random < it->_weight)
+			it->_factor = GetReflectedFactor(material,primitive,it->_v,toViewer);
+			Real max_factor = std::max(std::max(it->_factor.x(),it->_factor.y()),it->_factor.z());
+			it->_c=max_factor;
+
+			weightSum += it->_c;
+		}
+		
+		//normalize weights
+		if(weightSum <= 0.0f)
+		{
+			//if something goes wrong use fallback sphere
+			return ColorArray(0.0f,0.0f,0.0f);
+		}
+		else
+			for(auto it = estimators.begin(); it != estimators.end(); ++it)
 			{
-				if(it->_pdf)
-					chosenFactor = it->_factor/it->_pdf;
-				else
-					chosenFactor = ColorArray(0.0f,0.0f,0.0f);
-				//path._accumulatedRadiance = it->_debug;
-				reflected = it->_v;
-				found = true;
+				it->_c /= weightSum;
+				it->_pdfSum = 0.0f;
+			}
+
+		//randomly pick an estimator
+		Estimator* chosenEstimator = 0;
+		for(auto it = estimators.begin(); it != estimators.end(); ++it)
+		{
+			
+			if(random < it->_c)
+			{
+				chosenEstimator = &*it;
 				break;
 			}
 			else
-				random -= it->_weight;
+				random -= it->_c;
 		}
-		if(!found)
-			chosenFactor = ColorArray(0.0f,0.0f,0.0f);
 
-		
-		
-		return chosenFactor;
+		if(!chosenEstimator || (chosenEstimator->_pdf == 0.0f))
+			return ColorArray(0.0f,0.0f,0.0f);
+
+		Real heuristicPower= 2.0f;
+
+		// calculate pdf's
+		if(diffuse)
+			chosenEstimator->_pdfSum += powf(pdfAtCosineWeightedHemisphere(xTangent,yTangent,normal,chosenEstimator->_v)*diffuse->_c,heuristicPower);
+		if(reflect)
+			chosenEstimator->_pdfSum += powf(pdfAtCosineWeightedLobe(xTangentSpecular,yTangent,vSpec,material._specularPower,chosenEstimator->_v)*reflect->_c,heuristicPower);
+		if(transparent)
+			chosenEstimator->_pdfSum += powf(pdfAtCosineWeightedLobe(xTangentRefracted,yTangent,vRef,material._refractionPower,chosenEstimator->_v)*transparent->_c,heuristicPower);
+		if(fallback)
+			chosenEstimator->_pdfSum += powf(pdfAtUniformSphere(xTangent,yTangent,normal,chosenEstimator->_v)*fallback->_c,heuristicPower);
+
+		reflected = chosenEstimator->_v;
+
+		chosenEstimator->_weight = powf(chosenEstimator->_c*chosenEstimator->_pdf,heuristicPower)/chosenEstimator->_pdfSum;
+
+		return chosenEstimator->_factor*chosenEstimator->_weight/ chosenEstimator->_pdf;
 	}
 				
 	
@@ -380,13 +471,13 @@ template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlo
 			const MaterialSettings& material = _materials[primitive._material];
 			
 			// emitted light by the object itself
-			path._accumulatedRadiance += material._color * material._emit * path._pdf;
+			path._accumulatedRadiance += material._color * material._emit * path._importance;
 
 		}
 		else
 		{
 			// left scene, emissive = environment
-			path._accumulatedRadiance += path._pdf * getBackgroundColor(-path._parentDir);
+			path._accumulatedRadiance += path._importance * getBackgroundColor(-path._parentDir);
 		}
 
 	}
@@ -404,13 +495,17 @@ template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlo
 
 			Real lightDistanceSq = toLight.squaredNorm();
 
-			Real lightArea = lightDistanceSq*4*M_PI;
+			Real lightArea = lightDistanceSq*4.0f*M_PI;
 
-			toLight /= sqrtf(lightDistanceSq);
+			toLight.normalize();
 
 
-			ColorArray lightPDF = GetReflectedFactor(material,primitive,toLight,path._parentDir) * il->_color.array() * path._pdf / lightArea;
-					
+			ColorArray lightPDF = GetReflectedFactorPoint(material,primitive,toLight,path._parentDir) * il->_color.array() * path._importance / lightArea;
+			/*
+			assert(lightPDF[0] <= 5.0f);
+			assert(lightPDF[1] <= 5.0f);
+			assert(lightPDF[2] <= 5.0f);
+		*/
 			if(lightPDF[0] >= Epsilon || lightPDF[1] >= Epsilon || lightPDF[2] >= Epsilon)
 			{
 				directNodeWrite.push_back(DirectNode());
@@ -443,144 +538,7 @@ template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlo
 
 		}
 	}
-	
 
-	inline void generateEstimators(Path& path,static_vector<Estimator,MaxEstimators>& out)
-	{
-		const PrimitiveData& primitive = _primitives[path._id];
-		const MaterialSettings& material = _materials[primitive._material];
-		const Vector3& toViewer = path._parentDir;
-		const Vector3& normal = primitive._normal;
-		Vector3 yTangent = path._parentDir.cross(normal).normalized();
-	
-		if(yTangent.squaredNorm() != 0.0f)
-			yTangent.normalize();
-		else
-		{
-			yTangent = path._parentDir.cross(Vector3(1.0f,0.0f,0.0f));
-			if(yTangent.squaredNorm() != 0.0f)
-				yTangent.normalize();
-			else
-				yTangent = path._parentDir.cross(Vector3(0.0f,1.0f,0.0f)).normalized();
-		}
-		
-		// random values
-		Vector2 uv = _sampleData->getSampleValueMisc2D(path._sample,path._threadId);
-
-		// variables
-		Vector3 xTangent = yTangent.cross(normal).normalized();
-		Vector3 xTangentSpecular;
-		Vector3 xTangentRefracted;
-		Vector3 vSpec;
-		Vector3 vRef;
-		Estimator e;
-
-		bool hasDiffuse = false,hasReflect = false,hasTransparent=false,hasFallback=false;
-		
-		if(material._diffuseReflect > 0.0f)
-		{
-			e._pdf = cosineWeightedHemisphere(uv,xTangent,yTangent,normal,e._v);
-			//e._debug = ColorArray(1.0f,0.0f,0.0f);
-			hasDiffuse = true;
-			e._weight =material._diffuseReflect;
-			out.push_back(e);
-		}		
-		if(material._specularReflect > 0.0f && GetSpecularDirection(toViewer,primitive._normal,vSpec))
-		{		
-			xTangentSpecular = yTangent.cross(vSpec).normalized();
-
-			e._pdf = cosineWeightedLobe(uv,xTangentSpecular,yTangent,vSpec,material._specularPower,e._v);
-			//e._debug = ColorArray(0.0f,1.0f,0.0f);
-			hasReflect = true;
-			e._weight =material._specularReflect;
-			out.push_back(e);
-		}		
-		if(material._transparency > 0.0f &&GetRefractedDirection(toViewer,primitive._normal,material._indexOfRefraction,vRef))
-		{
-			xTangentRefracted = yTangent.cross(vRef).normalized();
-
-			e._pdf = cosineWeightedLobe(uv,xTangentRefracted,yTangent,vRef,material._refractionPower,e._v);
-			//e._debug = ColorArray(0.0f,0.0f,1.0f);
-			hasTransparent = true;
-			e._weight =material._transparency;
-			out.push_back(e);
-		}
-		{
-			//fallback
-			e._pdf = uniformSphere(uv,xTangent,yTangent,normal,e._v);
-			//e._debug = ColorArray(0.5f,0.5f,.5f);
-			hasFallback = true;
-			e._weight = 0.1f;
-			out.push_back(e);
-		} 
-		
-		//calculate weights
-
-		Real weightSum= 0.0f;
-
-		for(auto it = out.begin(); it != out.end(); ++it)
-		{
-			it->_factor = GetReflectedFactor(material,primitive,it->_v,toViewer);
-			Real max_factor = std::max(std::max(it->_factor.x(),it->_factor.y()),it->_factor.z());
-			it->_factor *=  it->_pdf;
-			it->_weight=max_factor;//*it->_pdf;
-			weightSum += it->_weight;
-		}
-		
-		//normalize weights
-		if(weightSum <= 0.0f)
-		{
-			//if something goes wrong use fallback sphere
-			out.back()._weight = 1.0f;
-		}
-		else
-			for(auto it = out.begin(); it != out.end(); ++it)
-			{
-				it->_weight /= weightSum;
-				it->_pdf *= it->_weight;
-			}
-
-		// calculate pdf's
-			
-		size_t iOut = 0;
-		if(hasDiffuse)
-		{
-			Real pdfSum = 0.0f;
-			for(auto it = out.begin(); it != out.end(); ++it)
-				if(it - out.begin() != iOut)
-					it->_pdf+= pdfAtCosineWeightedHemisphere(xTangent,yTangent,normal,it->_v)*out[iOut]._weight;
-
-			++iOut;
-		}
-		if(hasReflect)
-		{
-			Real pdfSum = 0.0f;
-			for(auto it = out.begin(); it != out.end(); ++it)
-				if(it - out.begin() != iOut)
-					it->_pdf+= pdfAtCosineWeightedLobe(xTangentSpecular,yTangent,vSpec,material._specularPower,it->_v)*out[iOut]._weight;
-
-			++iOut;
-		}
-		if(hasTransparent)
-		{
-			Real pdfSum = 0.0f;
-			for(auto it = out.begin(); it != out.end(); ++it)
-				if(it - out.begin() != iOut)
-					it->_pdf+= pdfAtCosineWeightedLobe(xTangentRefracted,yTangent,vRef,material._refractionPower,it->_v)*out[iOut]._weight;
-
-			++iOut;
-		}
-		if(hasFallback)
-		{
-			Real pdfSum = 0.0f;
-			for(auto it = out.begin(); it != out.end(); ++it)
-				if(it - out.begin() != iOut)
-					it->_pdf+= pdfAtUniformSphere(xTangent,yTangent,normal,it->_v)*out[iOut]._weight;
-
-			++iOut;
-		}
-
-	}
 
 	SampleData*						_sampleData;
 	RayData*						_rayData;

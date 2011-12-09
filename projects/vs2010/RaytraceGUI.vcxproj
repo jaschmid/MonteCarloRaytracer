@@ -230,9 +230,9 @@
       <FloatingPointExceptions>false</FloatingPointExceptions>
       <InterproceduralOptimization>SingleFile</InterproceduralOptimization>
       <OptimizeForWindowsApplication>true</OptimizeForWindowsApplication>
-      <EnableMatrixMultiplyLibraryCall>Yes</EnableMatrixMultiplyLibraryCall>
-      <Parallelization>true</Parallelization>
-      <UseIntelOptimizedHeaders>true</UseIntelOptimizedHeaders>
+      <EnableMatrixMultiplyLibraryCall>No</EnableMatrixMultiplyLibraryCall>
+      <Parallelization>false</Parallelization>
+      <UseIntelOptimizedHeaders>false</UseIntelOptimizedHeaders>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

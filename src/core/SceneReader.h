@@ -63,6 +63,8 @@ namespace Raytrace {
 			Vector3 up = (camera->GetUp() - from).normalized();
 
 			_viewMatrix = FromLookAt(from,to,up);
+
+			size_t primitives = getNumPrimitives();
 		}
 
 		inline int getNumPrimitives() const

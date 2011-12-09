@@ -129,7 +129,7 @@ template<class _SampleData,class _RayData,class _SceneReader> struct IntegratorB
 			_primitives[i]._normal = AB.cross(AC).normalized();
 		}
 		
-		_lights.push_back(Light( Vector3(-.5f,.8f,1.0f) , Vector3(20.f,20.f,20.f) ));
+		_lights.push_back(Light( Vector3(-.5f,.7f,3.0f) , Vector3(15.f,15.f,15.f) ));
 		/*_lights.push_back(Light( Vector3(.5f,.8f,1.0f) , Vector3(8.f,8.f,8.f) ));
 		_lights.push_back(Light( Vector3(0.0f,.5f,1.0f) , Vector3(8.f,8.f,8.f) ));*/
 		
@@ -166,7 +166,7 @@ template<class _SampleData,class _RayData,class _SceneReader> struct IntegratorB
 			return 0.0f;
 	}
 
-	static inline void uniformHemisphere(const Vector2& uniform,const Vector3& x,const Vector3& y,const Vector3& z,Vector3& out)
+	static inline Real uniformHemisphere(const Vector2& uniform,const Vector3& x,const Vector3& y,const Vector3& z,Vector3& out)
 	{
 		
 		Real phi = uniform.x() * M_PI*2.0f;
@@ -174,7 +174,7 @@ template<class _SampleData,class _RayData,class _SceneReader> struct IntegratorB
 		Real theta = acosf(uniform.y());
 			
 		out = sphericalToCartesian(phi,theta,x,y,z);
-		return &pdfAtUniformHemisphere;
+		return pdfAtUniformHemisphere(x,y,z,out);
 	}
 
 	static inline Real pdfAtCosineWeightedHemisphere(const Vector3& x,const Vector3& y,const Vector3& z,const Vector3& dir)
@@ -192,14 +192,14 @@ template<class _SampleData,class _RayData,class _SceneReader> struct IntegratorB
 		Real theta = acosf(cos_theta);
 
 		out = sphericalToCartesian(phi,theta,x,y,z);
-		return cos_theta/(M_PI);
+		return pdfAtCosineWeightedHemisphere(x,y,z,out);
 	}
 	
 
 	static inline Real pdfAtCosineWeightedLobe(const Vector3& x,const Vector3& y,const Vector3& z,Real weight,const Vector3& dir)
 	{		
 		if(z.dot(dir)>0.0f)
-			return (weight+1.0f)*powf(dir.dot(z),weight)/(2.0f*M_PI);
+			return (weight+2.0f)*powf(dir.dot(z),weight)/(2.0f*M_PI);
 		else
 			return 0.0f;
 	}
@@ -212,7 +212,7 @@ template<class _SampleData,class _RayData,class _SceneReader> struct IntegratorB
 
 
 		out = sphericalToCartesian(phi,theta,x,y,z);
-		return (weight+1.0f)*powf(cos_theta,weight)/(2.0f*M_PI);
+		return pdfAtCosineWeightedLobe(x,y,z,weight,out);
 	}
 	
 	static inline Real pdfAtUniformSphere(const Vector3& x,const Vector3& y,const Vector3& z,const Vector3& dir)
@@ -230,7 +230,7 @@ template<class _SampleData,class _RayData,class _SceneReader> struct IntegratorB
 		out = sphericalToCartesian(phi,theta,x,y,z);
 
 		//pdf for uniform over full sphere
-		return 1.0f/(4.0f*M_PI);
+		return pdfAtUniformSphere(x,y,z,out);
 	}
 	
 	static inline bool GetSpecularDirection(const Vector3& toIncident,const Vector3& normal,Vector3& out)
@@ -311,8 +311,18 @@ template<class _SampleData,class _RayData,class _SceneReader> struct IntegratorB
 	{
 		ColorArray brdf;
 		BRDF(material,primitive,toLight,toViewer,brdf);
-		Real dot =fabs(toLight.dot(primitive._normal));
-		brdf*=dot;
+
+		/*
+		assert(brdf.x() >= 0.0f && brdf.x() <= 1.0f);
+		assert(brdf.y() >= 0.0f && brdf.y() <= 1.0f);
+		assert(brdf.z() >= 0.0f && brdf.z() <= 1.0f);*/
+		return brdf;
+	}
+	
+	inline ColorArray GetReflectedFactorPoint(const MaterialSettings& material,const PrimitiveData& primitive,const Vector3& toLight,const Vector3& toViewer)
+	{
+		ColorArray brdf;
+		BRDFPoint(material,primitive,toLight,toViewer,brdf);
 		/*
 		assert(brdf.x() >= 0.0f && brdf.x() <= 1.0f);
 		assert(brdf.y() >= 0.0f && brdf.y() <= 1.0f);
@@ -330,20 +340,18 @@ template<class _SampleData,class _RayData,class _SceneReader> struct IntegratorB
 		Real cosThetaView = toViewer.dot(primitive._normal);
 		
 		if(cosThetaLight > 0.0f && cosThetaView > 0.0f)
-		{
-			brdf += (material._color * material._diffuseReflect) ;
+			brdf += (material._color * material._diffuseReflect)*fabs(cosThetaLight)/M_PI;
 		
-			Vector3 vSpec;
+		Vector3 vSpec;
 
-			if( material._specularReflect > 0.0f && GetSpecularDirection(toLight,primitive._normal,vSpec))
-			{
-				Real n = material._specularPower;
-				Real vSpecCos = vSpec.dot(toViewer);
-				if(vSpecCos > 0.0f)
-					brdf += (material._specularReflect * material._mirrorColor)* powf(vSpecCos,n)/cosThetaLight;
-			}
+		if( material._specularReflect > 0.0f && GetSpecularDirection(toLight,primitive._normal,vSpec))
+		{
+			Real n = material._specularPower;
+			Real vSpecCos = vSpec.dot(toViewer);
+			if(vSpecCos > 0.0f)
+				brdf += (material._specularReflect * material._mirrorColor)*(n+1)* powf(vSpecCos,n) / (2.0f*M_PI);
 		}
-		
+
 		Vector3 vRefracted;
 
 		if(material._transparency > 0.0f && GetRefractedDirection(toLight,primitive._normal,material._indexOfRefraction,vRefracted) )
@@ -352,7 +360,42 @@ template<class _SampleData,class _RayData,class _SceneReader> struct IntegratorB
 			Real n = material._specularPower;	
 			Real vRefCos = vRefracted.dot(toViewer);
 			if(vRefCos > 0.0f)
-				brdf += material._transparency * material._filterColor* powf(vRefCos,n)/fabs(cosThetaLight);
+				brdf += material._transparency * material._filterColor*(n+1)* powf(vRefCos,n) / (2.0f*M_PI);
+		}
+
+	}
+	
+	inline void BRDFPoint(const MaterialSettings& material,const PrimitiveData& primitive,const Vector3& toLight,const Vector3& toViewer,ColorArray& brdf)
+	{
+		Real pdf = 0.0f;
+		brdf = ColorArray(0.0f,0.0f,0.0f);
+		// diffuse
+		
+		Real cosThetaLight = toLight.dot(primitive._normal);
+		Real cosThetaView = toViewer.dot(primitive._normal);
+		
+		if(cosThetaLight > 0.0f && cosThetaView > 0.0f)
+			brdf += (material._color * material._diffuseReflect)*fabs(cosThetaLight);
+		
+		Vector3 vSpec;
+
+		if( material._specularReflect > 0.0f && GetSpecularDirection(toLight,primitive._normal,vSpec))
+		{
+			Real n = material._specularPower;
+			Real vSpecCos = vSpec.dot(toViewer);
+			if(vSpecCos > 0.0f)
+				brdf += (material._specularReflect * material._mirrorColor)* powf(vSpecCos,n) ;
+		}
+
+		Vector3 vRefracted;
+
+		if(material._transparency > 0.0f && GetRefractedDirection(toLight,primitive._normal,material._indexOfRefraction,vRefracted) )
+		{
+			//refraction
+			Real n = material._specularPower;	
+			Real vRefCos = vRefracted.dot(toViewer);
+			if(vRefCos > 0.0f)
+				brdf += material._transparency * material._filterColor* powf(vRefCos,n);
 		}
 
 	}

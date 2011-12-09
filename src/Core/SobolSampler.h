@@ -40,7 +40,7 @@ template<class _SampleData,class _SceneReader> struct SobolSampler : public Samp
 	const static size_t NumDimensions = 2048;
 	const static size_t MaxBits	= 16;
 	
-	const static size_t NumJitterValues = 1024*1024;
+	const static size_t NumJitterValues = 1024;
 
 	struct SobolSequence;
 	typedef SamplerBase<_SampleData,_SceneReader> Base;
@@ -68,6 +68,7 @@ template<class _SampleData,class _SceneReader> struct SobolSampler : public Samp
 		_currentSequenceIdx = 1;
 		_sampleIdx = 1;
 		GenerateInitialSobolSequence(_sequences[_lastSequenceIdx]);
+		NextSobolSequence(_sequences[_lastSequenceIdx],_sequences[_currentSequenceIdx]);
 		/*
 		while(true)
 		{
@@ -110,15 +111,26 @@ template<class _SampleData,class _SceneReader> struct SobolSampler : public Samp
 
 	inline float mixup(u32 baseRandom,u32 mixin)
 	{
-		mixin = _jitters[mixin%NumJitterValues];
-		mixin = ( mixin << 16) | ( mixin >> 16);
-		mixin = ((mixin & 0x00ff00ff) << 8)	| ((mixin & 0xff00ff00) >> 8);
-		mixin = ((mixin & 0x0f0f0f0f) << 4)	| ((mixin & 0xf0f0f0f0) >> 4);
-		mixin = ((mixin & 0x33333333) << 2)	| ((mixin & 0xcccccccc) >> 2);
-		mixin = ((mixin & 0x55555555) << 1)	| ((mixin & 0xaaaaaaaa) >> 1);
-		mixin ^= baseRandom;
+		/*
+		u32 jitter1 = _jitters[mixin%NumJitterValues];
+		u32 jitter2 = _jitters[(mixin/NumJitterValues)%NumJitterValues];
+		
+		
+		jitter1 = ( jitter1 << 16) | ( jitter1 >> 16);
+		jitter1 = ((jitter1 & 0x00ff00ff) << 8)	| ((jitter1 & 0xff00ff00) >> 8);
+		jitter1 = ((jitter1 & 0x0f0f0f0f) << 4)	| ((jitter1 & 0xf0f0f0f0) >> 4);
+		jitter1 = ((jitter1 & 0x33333333) << 2)	| ((jitter1 & 0xcccccccc) >> 2);
+		jitter1 = ((jitter1 & 0x55555555) << 1)	| ((jitter1 & 0xaaaaaaaa) >> 1);
+		
+		baseRandom ^= jitter1;
+		baseRandom ^= jitter2;*/
 
-		Real result =  frac( (double) mixin / (double) 0x100000000LL);
+		for(u32 v = 1<<31; mixin; mixin >>= 1, v |= v>>1)
+			if(mixin & 1)
+				baseRandom ^= v;
+		
+
+		Real result =  frac( (double) baseRandom / (double) 0x100000000LL);
 
 		assert(result >= 0.0f && result < 1.0f);
 		return result;
@@ -127,6 +139,16 @@ template<class _SampleData,class _SceneReader> struct SobolSampler : public Samp
 	inline Vector2 getRandomValue2D(size_t sampleIndex,size_t randomIndex)
 	{
 		return Vector2(getRandomValue(sampleIndex,NumDimensions/2 + (randomIndex*2)+0),getRandomValue(sampleIndex,NumDimensions/2 + (randomIndex*2)+1));
+	}
+
+	inline static u32 hash( u32 a)
+	{
+		a = (a ^ 61) ^ (a >> 16);
+		a = a + (a << 3);
+		a = a ^ (a >> 4);
+		a = a * 0x27d4eb2d;
+		a = a ^ (a >> 15);
+		return a;
 	}
 
 	inline Real getRandomValue(size_t sampleIndex,size_t randomIndex)
@@ -139,7 +161,18 @@ template<class _SampleData,class _SceneReader> struct SobolSampler : public Samp
 			assert(sequenceIndex == _sampleIdx -1);
 			sequenceIndex = _lastSequenceIdx;
 		}
-		return mixup(_sequences[sequenceIndex]._X[randomIndex], (sampleIndex%_finalImage.size() + randomIndex) );
+		sampleIndex %= _finalImage.size();
+		size_t jitter1=_jitters[hash(sampleIndex)%NumJitterValues];
+		
+		size_t dimension_index = randomIndex;
+		
+		for(u32 v = 1<<31; jitter1; jitter1 >>= 1, v |= v>>1)
+			if(jitter1 & 1)
+				dimension_index ^= v;
+
+		size_t jitter2=_jitters[hash(sampleIndex+randomIndex)%NumJitterValues];
+
+		return mixup(_sequences[sequenceIndex]._X[ dimension_index %NumDimensions], jitter2 );
 	}
 
 	typename SampleData::SampleValue2DType getSampleLocation2D(const typename SampleData::SampleInput& sample,typename SampleData::SampleIndexType random_index,size_t threadId)

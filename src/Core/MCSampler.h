@@ -72,7 +72,7 @@ template<class _SampleData,class _SceneReader> struct MCSampler : public Sampler
 	{
 		//_sampler.Initialize(1.0f/32.0f);
 
-		InitializeSampler(numThreads,scene,sampleData,64);
+		InitializeSampler(numThreads,scene,sampleData,2048);
 
 		_sampleData->setSampleGenerator(this);
 				

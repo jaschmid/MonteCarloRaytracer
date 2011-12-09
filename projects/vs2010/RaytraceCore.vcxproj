@@ -374,10 +374,10 @@
       <FloatingPointModel>Precise</FloatingPointModel>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions3</EnableEnhancedInstructionSet>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <OptimizeForWindowsApplication>false</OptimizeForWindowsApplication>
+      <OptimizeForWindowsApplication>true</OptimizeForWindowsApplication>
       <EnableMatrixMultiplyLibraryCall>No</EnableMatrixMultiplyLibraryCall>
       <Parallelization>false</Parallelization>
-      <UseIntelOptimizedHeaders>true</UseIntelOptimizedHeaders>
+      <UseIntelOptimizedHeaders>false</UseIntelOptimizedHeaders>
       <OmitFramePointers>true</OmitFramePointers>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <InterproceduralOptimization>SingleFile</InterproceduralOptimization>
@@ -386,9 +386,10 @@
       <FloatingPointExceptions>false</FloatingPointExceptions>
       <UnmaskFloatingPointExceptions>NoTraps</UnmaskFloatingPointExceptions>
       <FloatingPointExpressionEvaluation>Source</FloatingPointExpressionEvaluation>
-      <OpenMP>GenerateParallelCode</OpenMP>
+      <OpenMP>None</OpenMP>
       <Cpp0xSupport>true</Cpp0xSupport>
       <StructMemberAlignment>Default</StructMemberAlignment>
+      <FlushDenormalResultsToZero>true</FlushDenormalResultsToZero>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

@@ -15,7 +15,7 @@
 	<IOR fval="1.8"/>
 	<color r="1" g="0.9" b="0.9" a="1"/>
 	<diffuse_reflect fval=".0"/>
-	<emit fval="24"/>
+	<emit fval="0"/>
 	<fresnel_effect bval="false"/>
 	<mirror_color r="1" g="1" b="1" a="1"/>
 	<specular_reflect fval=".9"/>
@@ -28,11 +28,11 @@
 <material name="Red.002--2143450420">
 	<IOR fval="1.8"/>
 	<color r="0.521952" g="0" b="0" a="1"/>
-	<diffuse_reflect fval=".9"/>
+	<diffuse_reflect fval=".4"/>
 	<emit fval="0"/>
 	<fresnel_effect bval="false"/>
 	<mirror_color r="1" g="1" b="1" a="1"/>
-	<specular_reflect fval=".0"/>
+	<specular_reflect fval=".4"/>
 	<translucency fval="0"/>
 	<transmit_filter fval="1"/>
 	<transparency fval="0"/>
@@ -42,11 +42,11 @@
 <material name="Green.002--2143450327">
 	<IOR fval="1.8"/>
 	<color r="0.255216" g="0.352846" b="0.274266" a="1"/>
-	<diffuse_reflect fval=".1"/>
+	<diffuse_reflect fval=".4"/>
 	<emit fval="0"/>
 	<fresnel_effect bval="false"/>
 	<mirror_color r="1" g="1" b="1" a="1"/>
-	<specular_reflect fval=".9"/>
+	<specular_reflect fval=".4"/>
 	<translucency fval="0"/>
 	<transmit_filter fval="1"/>
 	<transparency fval="0"/>
@@ -56,11 +56,11 @@
 <material name="Blue.002--2143450234">
 	<IOR fval="1.8"/>
 	<color r="0.096971" g="0.189369" b="0.547968" a="1"/>
-	<diffuse_reflect fval=".9"/>
+	<diffuse_reflect fval=".4"/>
 	<emit fval="0"/>
 	<fresnel_effect bval="false"/>
 	<mirror_color r="1" g="1" b="1" a="1"/>
-	<specular_reflect fval=".0"/>
+	<specular_reflect fval=".4"/>
 	<translucency fval="0"/>
 	<transmit_filter fval="1"/>
 	<transparency fval="0"/>
@@ -70,11 +70,11 @@
 <material name="white-4033182">
 	<IOR fval="1.8"/>
 	<color r="1" g="1" b="1" a="1"/>
-	<diffuse_reflect fval=".9"/>
+	<diffuse_reflect fval=".4"/>
 	<emit fval=".0"/>
 	<fresnel_effect bval="false"/>
 	<mirror_color r="1" g="1" b="1" a="1"/>
-	<specular_reflect fval=".0"/>
+	<specular_reflect fval=".4"/>
 	<translucency fval="0"/>
 	<transmit_filter fval="1"/>
 	<transparency fval="0"/>

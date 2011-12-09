@@ -8,3 +8,5 @@ projects/vs2010/Raytracer.opensdf
 projects/vs2010/My Amplifier XE Results - RaytraceGUI/
 projects/codelight/Debug/
 projects/vs2010/log.txt
+report/
+bin/RaytraceGUI.exe
