@@ -1,0 +1,232 @@
+global proc int[] raytracePreview_getRenderViewResolution()
+{
+  float $xres = `getAttr defaultResolution.width`;
+  float $yres = `getAttr defaultResolution.height`;
+  int   $res, $width, $heigth;
+  if ( `optionVar -ex renderViewTestResolution` ) $res  = `optionVar -q renderViewTestResolution`;
+
+  switch( $res ) {
+    case 2:
+      $width  = $xres * 0.1;
+      $heigth = $yres * 0.1;
+      break;
+    case 3:
+      $width  = $xres * 0.25;
+      $heigth = $yres * 0.25;
+      break;
+    case 4:
+      $width  = $xres * 0.5;
+      $heigth = $yres * 0.5;
+      break;
+    case 5:
+      $width  = $xres * 0.75;
+      $heigth = $yres * 0.75;
+      break;
+    case 6:
+      $width  = $xres * 1.1;
+      $heigth = $yres * 1.1;
+      break;
+    case 7:
+      $width  = $xres * 1.25;
+      $heigth = $yres * 1.25;
+      break;
+    case 8:
+      $width  = $xres * 1.5;
+      $heigth = $yres * 1.5;
+      break;
+    default:
+      $width  = $xres;
+      $heigth = $yres;
+      break;
+  }
+
+  return {$width, $heigth};
+}
+
+
+
+global proc string raytraceCheckGlobals()
+{    
+	string $globalsNode;
+	string $globalsNodes[] = stringArrayRemove({"<done>"},`lsType raytraceGlobalsNode`);     
+	if(size($globalsNodes))
+	{
+		$globalsNode = $globalsNodes[0];
+		string $unusedNodes[] = stringArrayRemove({$globalsNode},$globalsNodes);
+		if(size($unusedNodes))
+			delete $unusedNodes;
+	}
+	else
+	{
+		$globalsNode = `createNode raytraceGlobalsNode`;
+
+	}
+	return $globalsNode;
+}
+
+global proc raytracePreview()
+{
+	undoInfo -stateWithoutFlush 0;
+	int $mods = `getModifiers`;
+	int $imageSize[2] = raytracePreview_getRenderViewResolution();
+
+	if ( ($mods / 1) % 2) 
+	{
+		raytrace -width $imageSize[0] -height $imageSize[1] -sel;
+	} 
+	else 
+	{
+		raytrace -width $imageSize[0] -height $imageSize[1];
+	}
+	undoInfo -stateWithoutFlush 1;
+}
+
+global proc string raytraceMayaRender(int $resolution0, int $resolution1, int $doShadows, int $doGlowPass, string $camera, string $option)
+{
+
+	raytraceCheckGlobals();
+
+	// Ensure we dont let maya test resolution optionvar bug get us
+	if (`optionVar -ex "renderViewTestResolution"`) 
+	{
+  		// seems to get set null on render abort, clear it
+		if (`optionVar -q "renderViewTestResolution"` == 0) 
+		{
+			optionVar -remove "renderViewTestResolution";
+		}
+	}
+
+	raytracePreview();
+
+	return "";
+}
+
+global proc raytraceUpdateSampler()
+{
+    string $raytraceGlobals = raytraceCheckGlobals();
+	string $selected = `optionMenuGrp -q -v raytraceSampler`;
+	setAttr ( $raytraceGlobals + ".sampler" ) -type "string" $selected;
+}
+
+global proc raytraceUpdateIntegrator()
+{
+    string $raytraceGlobals = raytraceCheckGlobals();
+	string $selected = `optionMenuGrp -q -v raytraceIntegrator`;
+	setAttr ( $raytraceGlobals + ".integrator" ) -type "string" $selected;
+}
+
+global proc raytraceUpdateIntersector()
+{
+    string $raytraceGlobals = raytraceCheckGlobals();
+	string $selected = `optionMenuGrp -q -v raytraceIntersector`;
+	setAttr ( $raytraceGlobals + ".intersector" ) -type "string" $selected;
+}
+
+
+global proc browseImageRadiance( )
+{
+	string $files[] = `fileDialog2 -ds 2 -caption "Chose image file..." -fm 1`;
+	if(size($files) > 0)
+	{
+		string $raytraceGlobals = raytraceCheckGlobals();
+		string $file = $files[0];
+		setAttr ( $raytraceGlobals + ".lightEnvironment" ) -type "string" $file;
+	textField -edit -tx `getAttr ($raytraceGlobals + ".lightEnvironment")` lightEnvironmentTextbox;
+	}
+}
+
+global proc createRaytraceGlobalsTab()
+{
+	// Create the render globals node.
+    string $raytraceGlobals = raytraceCheckGlobals();
+
+	string $parentForm = `setParent -query`;
+    setParent $parentForm;
+
+	scrollLayout -horizontalScrollBarThickness 0 raytraceGlobalsTab;
+
+	attrControlGrp -label "Multisample Count" -attribute ($raytraceGlobals + ".multisampleCount");
+	
+    optionMenuGrp -l "Sampler:" -changeCommand raytraceUpdateSampler raytraceSampler;
+		menuItem -label "Monte Carlo Sampler";
+        menuItem -label "Sobol Sampler";
+
+		
+    optionMenuGrp -e -v `getAttr ($raytraceGlobals + ".sampler")` raytraceSampler;
+
+    optionMenuGrp -l "Integrator:" -changeCommand raytraceUpdateIntegrator raytraceIntegrator;
+		menuItem -label "Whitted Integrator";
+        menuItem -label "Backward Integrator";
+		
+    optionMenuGrp -e -v `getAttr ($raytraceGlobals + ".integrator")` raytraceIntegrator;
+
+    optionMenuGrp -l "Intersector:" -changeCommand raytraceUpdateIntersector raytraceIntersector;
+		menuItem -label "Simple Intersector";
+        menuItem -label "BVH Intersector";
+	
+
+    optionMenuGrp -e -v `getAttr ($raytraceGlobals + ".intersector")` raytraceIntersector;
+	
+	text -label "Environment Light Image";
+	rowLayout -numberOfColumns 4 -width 350;	
+	textField -w 200 -tx "" lightEnvironmentTextbox;
+	textField -edit -tx `getAttr ($raytraceGlobals + ".lightEnvironment")` lightEnvironmentTextbox;
+	button -label "..." -w 50 -command "browseImageRadiance()";	
+	setParent ..;
+
+	setParent $parentForm;
+
+	formLayout
+                -edit
+                -af raytraceGlobalsTab "top" 0
+                -af raytraceGlobalsTab "bottom" 0
+                -af raytraceGlobalsTab "left" 0
+                -af raytraceGlobalsTab "right" 0
+                $parentForm;
+}
+
+global proc updateRaytraceGlobalsTab()
+{
+}
+
+global proc registerRaytraceRenderer()
+{
+
+	if ( !`renderer -q -ex raytracer` ) 
+	{
+
+        renderer  -rendererUIName                        "Raytracer" 
+                  -renderProcedure                       "raytraceMayaRender"
+                  -batchRenderProcedure                  "raytraceMayaRender"
+                  raytracer;
+				  
+        renderer	-edit
+					-addGlobalsTab  "Common"
+                                "createMayaSoftwareCommonGlobalsTab" 
+                                "updateMayaSoftwareCommonGlobalsTab" 
+					raytracer;
+        renderer	-edit
+					-addGlobalsTab  "Raytracer"
+                        "createRaytraceGlobalsTab"
+                        "updateRaytraceGlobalsTab"
+					raytracer;
+	}
+
+	updateRendererUI();
+}
+
+global proc unregisterRaytraceRenderer()
+{
+	if ( `renderer -q -ex raytracer` ) renderer -unregisterRenderer raytracer;
+	updateRendererUI();
+}
+
+global proc raytraceStartup()
+{
+	registerRaytraceRenderer();
+}
+
+global proc raytraceShutdown()
+{
+	unregisterRaytraceRenderer();
+}

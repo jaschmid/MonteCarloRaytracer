@@ -1,0 +1,237 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{962AD6AC-3163-430A-9562-983D72A16E39}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>MayaPlugin</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+    <OutDir>$(SolutionDir)..\..\out\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)..\..\temp\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
+    <IncludePath>$(MAYA_DIR_32)include;$(SolutionDir)..\..\src\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(MAYA_DIR_32)lib;$(LibraryPath)</LibraryPath>
+    <TargetExt>.mll</TargetExt>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LinkIncremental>true</LinkIncremental>
+    <OutDir>$(SolutionDir)..\..\out\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)..\..\temp\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
+    <IncludePath>$(MAYA_DIR_64)include;$(SolutionDir)..\..\src\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(MAYA_DIR_64)lib;$(LibraryPath)</LibraryPath>
+    <TargetExt>.mll</TargetExt>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+    <OutDir>$(SolutionDir)..\..\out\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)..\..\temp\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
+    <IncludePath>$(MAYA_DIR_32)include;$(SolutionDir)..\..\src\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(MAYA_DIR_32)lib;$(LibraryPath)</LibraryPath>
+    <TargetExt>.mll</TargetExt>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+    <OutDir>$(SolutionDir)..\..\out\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)..\..\temp\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
+    <IncludePath>$(MAYA_DIR_64)include;$(SolutionDir)..\..\src\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(MAYA_DIR_64)lib;$(LibraryPath)</LibraryPath>
+    <TargetExt>.mll</TargetExt>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>EIGEN_DONT_ALIGN;NT_PLUGIN;WIN32;_DEBUG;_WINDOWS;_USRDLL;MAYAPLUGIN_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <UndefineAllPreprocessorDefinitions>false</UndefineAllPreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>$(SolutionDir)..\..\out\RaytraceCore\$(Platform)\$(Configuration)\RaytraceCore.lib;Foundation.lib;OpenMaya.lib;OpenMayaUI.lib;OpenMayaAnim.lib;OpenMayaFX.lib;OpenMayaRender.lib;Image.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalOptions>/export:initializePlugin /export:uninitializePlugin
+ %(AdditionalOptions)</AdditionalOptions>
+    </Link>
+    <PostBuildEvent>
+      <Command>copy "$(OutDir)$(TargetName)$(TargetExt)" "$(MAYA_DIR_32)bin\plug-ins\Raytracer.mll"
+copy "$(OutDir)RaytraceUI.mel" "$(MAYA_DIR_32)scripts\Raytrace\RaytraceUI.mel"</Command>
+      <Message>Copying to Maya Directory</Message>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>EIGEN_DONT_ALIGN;NT_PLUGIN;WIN32;_DEBUG;_WINDOWS;_USRDLL;MAYAPLUGIN_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <UndefineAllPreprocessorDefinitions>false</UndefineAllPreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalOptions>/export:initializePlugin /export:uninitializePlugin
+ %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalDependencies>$(SolutionDir)..\..\out\RaytraceCore\$(Platform)\$(Configuration)\RaytraceCore.lib;Foundation.lib;OpenMaya.lib;OpenMayaUI.lib;OpenMayaAnim.lib;OpenMayaFX.lib;OpenMayaRender.lib;Image.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <PostBuildEvent>
+      <Command>copy "$(OutDir)$(TargetName)$(TargetExt)" "$(MAYA_DIR_64)bin\plug-ins\Raytracer.mll"
+copy "$(OutDir)RaytraceUI.mel" "$(MAYA_DIR_64)scripts\Raytrace\RaytraceUI.mel"</Command>
+      <Message>Copying to Maya Directory</Message>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>EIGEN_DONT_ALIGN;NT_PLUGIN;WIN32;NDEBUG;_WINDOWS;_USRDLL;MAYAPLUGIN_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderFile>headers.h</PrecompiledHeaderFile>
+      <UndefineAllPreprocessorDefinitions>false</UndefineAllPreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalOptions>/export:initializePlugin /export:uninitializePlugin
+ %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalDependencies>$(SolutionDir)..\..\out\RaytraceCore\$(Platform)\$(Configuration)\RaytraceCore.lib;Foundation.lib;OpenMaya.lib;OpenMayaUI.lib;OpenMayaAnim.lib;OpenMayaFX.lib;OpenMayaRender.lib;Image.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <PostBuildEvent>
+      <Command>copy "$(OutDir)$(TargetName)$(TargetExt)" "$(MAYA_DIR_32)bin\plug-ins\Raytracer.mll"
+copy "$(OutDir)RaytraceUI.mel" "$(MAYA_DIR_32)scripts\Raytrace\RaytraceUI.mel"</Command>
+      <Message>Copying to Maya Directory</Message>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>EIGEN_DONT_ALIGN;NT_PLUGIN;WIN32;NDEBUG;_WINDOWS;_USRDLL;MAYAPLUGIN_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderFile>headers.h</PrecompiledHeaderFile>
+      <UndefineAllPreprocessorDefinitions>false</UndefineAllPreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalOptions>/export:initializePlugin /export:uninitializePlugin
+ %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalDependencies>$(SolutionDir)..\..\out\RaytraceCore\$(Platform)\$(Configuration)\RaytraceCore.lib;Foundation.lib;OpenMaya.lib;OpenMayaUI.lib;OpenMayaAnim.lib;OpenMayaFX.lib;OpenMayaRender.lib;Image.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <PostBuildEvent>
+      <Command>copy "$(OutDir)$(TargetName)$(TargetExt)" "$(MAYA_DIR_64)bin\plug-ins\Raytracer.mll"
+copy "$(OutDir)RaytraceUI.mel" "$(MAYA_DIR_64)scripts\Raytrace\RaytraceUI.mel"</Command>
+      <Message>Copying to Maya Directory</Message>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\src\MayaPlugin\BaseImp.h" />
+    <ClInclude Include="..\..\src\MayaPlugin\headers.h" />
+    <ClInclude Include="..\..\src\MayaPlugin\MayaGlobals.h" />
+    <ClInclude Include="..\..\src\MayaPlugin\MayaSceneReader.h" />
+    <ClInclude Include="..\..\src\MayaPlugin\MayaRenderView.h" />
+    <ClInclude Include="..\..\src\MayaPlugin\PropertySetImp.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\src\MayaPlugin\headers.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">headers.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">headers.h</PrecompiledHeaderFile>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">headers.h</PrecompiledHeaderFile>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">headers.h</PrecompiledHeaderFile>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\..\src\MayaPlugin\MayaGlobals.cpp" />
+    <ClCompile Include="..\..\src\MayaPlugin\MayaSceneReader.cpp" />
+    <ClCompile Include="..\..\src\MayaPlugin\MayaRenderView.cpp" />
+    <ClCompile Include="..\..\src\MayaPlugin\register.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\src\MayaPlugin\RaytraceUI.mel">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">copy %(FullPath) $(OutDir)%(Filename).mel</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">copy %(FullPath) $(OutDir)%(Filename).mel</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">copy %(FullPath) $(OutDir)scripts\%(Filename).mel</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">copy %(FullPath) $(OutDir)%(Filename).mel</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Copying to output directory</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(OutDir)%(Filename).mel</Outputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying to output directory</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)%(Filename).mel</Outputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Copying to output directory</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)scripts\%(Filename).mel</Outputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying to output directory</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename).mel</Outputs>
+    </CustomBuild>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
