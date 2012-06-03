@@ -9,12 +9,19 @@ RObjectType IOutput::ObjectType = ObjectType::Output;
 
 Output CreateOutput(const String& name)
 {
-	return Output(new OutputImp(name));
+	return Output(new OutputImp(name,nullptr));
 }
 
-OutputImp::OutputImp(const String& name) : Base(name),
+Output CreateCustomOutput(const boost::shared_ptr<ISceneReader>& reader,const String& name)
+{
+	return Output(new OutputImp(name,&reader));
+}
+
+OutputImp::OutputImp(const String& name,const boost::shared_ptr<ISceneReader>* reader) : Base(name),
 	_enabled(true)
 {
+	if(reader)
+		_reader = *reader;
 	_engine = GetEngineName(0);
 	_sampler = GetSamplerName(0);
 	_intersector = GetIntersectorName(0);
@@ -32,7 +39,7 @@ Result OutputImp::GetLastFrameInfo(std::string& info)
 	if(_raytraceEngine.get())
 	{	
 		info = std::string("");
-		_raytraceEngine->GetStatus("info",info);
+		
 		/*
 		for(int i = 0; i < _raytraceEngine->GetNumModes(); ++i)
 		{
@@ -42,7 +49,7 @@ Result OutputImp::GetLastFrameInfo(std::string& info)
 			if(i != _raytraceEngine->GetNumModes()-1)
 				info+=", ";
 		}*/
-		return Result::Succeeded;
+		return _raytraceEngine->GetStatus("info",info);
 	}
 	else
 		return Result::Failed;
@@ -62,6 +69,9 @@ Result OutputImp::SetOutputSurface(void* pData, int nDataSize, int xResolution, 
 	case FORMAT_A8R8G8B8:
 		_outputFormat = A8R8G8B8;
 		break;
+	case FORMAT_RGBA_F32:
+		_outputFormat = RGBA_FLOAT32;
+		break;
 	default:
 		_outputFormat = R8G8B8A8;
 		break;
@@ -70,31 +80,41 @@ Result OutputImp::SetOutputSurface(void* pData, int nDataSize, int xResolution, 
 }
 Result OutputImp::Refresh()
 {
-	//try to retrieve camera and scene
-	Scene scene;
-	Camera camera;
-	if(IObjectContainer* icamera = Base::_parent)
+	boost::shared_ptr<SceneReaderAdapter<SimpleTriangle>> reader;
+	if(_reader.get() != nullptr)
 	{
-		try
+		reader.reset(new SceneReaderAdapter<SimpleTriangle>(_reader));
+	}
+	else
+	{
+
+		//try to retrieve camera and scene
+		Scene scene;
+		Camera camera;
+		if(IObjectContainer* icamera = Base::_parent)
 		{
-			IObjectContainer* iscene = dynamic_cast<CameraImp*>(icamera)->GetScene();
-			if(iscene != nullptr)
+			try
 			{
-				camera.reset(dynamic_cast<ICamera*>(icamera));
-				scene.reset(dynamic_cast<IScene*>(iscene));
+				IObjectContainer* iscene = dynamic_cast<CameraImp*>(icamera)->GetScene();
+				if(iscene != nullptr)
+				{
+					camera.reset(dynamic_cast<ICamera*>(icamera));
+					scene.reset(dynamic_cast<IScene*>(iscene));
+				}
+			}
+			catch(const std::bad_cast&)
+			{
+				camera.reset();
+				scene.reset();
 			}
 		}
-		catch(const std::bad_cast&)
-		{
-			camera.reset();
-			scene.reset();
-		}
+
+		if(scene.get() == nullptr || camera.get() == nullptr)
+			return Result::Failed;
+
+		boost::shared_ptr<ISceneReader> internalReader( new LoadedSceneReader(scene,camera,Output(this),Vector2u((u32)_xResOut,(u32)_yResOut))	);
+		reader.reset(new SceneReaderAdapter<SimpleTriangle>(internalReader));
 	}
-
-	if(scene.get() == nullptr || camera.get() == nullptr)
-		return Result::Failed;
-
-	boost::shared_ptr<LoadedSceneReader<SimpleTriangle>> reader(new LoadedSceneReader<SimpleTriangle>(scene,camera,Output(this),Vector2u((u32)_xResOut,(u32)_yResOut)));
 
 	if(_raytraceEngine.get())
 	{
@@ -113,6 +133,7 @@ Result OutputImp::Refresh()
 
 		_raytraceEngine->Begin();
 	}
+
 	return Result::Succeeded;
 }
 

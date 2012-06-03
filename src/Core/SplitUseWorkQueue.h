@@ -46,7 +46,7 @@ namespace SplitUseWorkQueueStuff
 		template<int _Size> struct DefaultElementContainer<bool,_Size> : public std::bitset<_Size>
 		{
 			typedef typename std::bitset<_Size>::reference reference;
-			typedef typename bool const_reference;
+			typedef bool const_reference;
 		};
 	}
 

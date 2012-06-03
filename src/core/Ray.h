@@ -129,7 +129,7 @@ namespace Raytrace {
 		{ 
 			template<class _RayBase> struct Reader
 			{
-				typedef typename typename _RayBase::Vector_T result;
+				typedef typename _RayBase::Vector_T result;
 				inline const typename _RayBase::Vector_T& operator()(const _RayBase& ray)
 				{
 					return ray.origin();
@@ -146,7 +146,7 @@ namespace Raytrace {
 		{
 			template<class _RayBase> struct Reader
 			{
-				typedef typename typename _RayBase::Vector_T result;
+				typedef typename _RayBase::Vector_T result;
 				inline const typename _RayBase::Vector_T& operator()(const _RayBase& ray)
 				{
 					return ray.direction();
@@ -246,7 +246,7 @@ namespace Raytrace {
 			{
 			}
 
-			inline void setDirection(const Base::Vector_T& direction)
+			inline void setDirection(const typename Base::Vector_T& direction)
 			{
 				Base::setDirection(direction);
 				

@@ -23,6 +23,8 @@
 #include <RaytraceCommon.h>
 
 namespace Raytrace {
+
+	static const Real R_PI = (Real)M_PI;
 	
 	static Matrix4 FromLookAt(const Vector3& eye,const Vector3& at,const Vector3& up)
 	{

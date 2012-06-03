@@ -35,11 +35,11 @@ namespace Raytrace {
 		static const PropertyMap& GetPropertySet()
 		{
 			const static PropertyMap set = boost::assign::map_list_of
-				("Enabled",Property(&GetEnabled,&SetEnabled))
-				("Intersector",Property(&GetIntersector,&SetIntersector))
-				("Integrator",Property(&GetIntegrator,&SetIntegrator))
-				("Sampler",Property(&GetSampler,&SetSampler))
-				("Engine",Property(&GetEngine,&SetEngine));
+				("Enabled",Property(&OutputImp::GetEnabled,&OutputImp::SetEnabled))
+				("Intersector",Property(&OutputImp::GetIntersector,&OutputImp::SetIntersector))
+				("Integrator",Property(&OutputImp::GetIntegrator,&OutputImp::SetIntegrator))
+				("Sampler",Property(&OutputImp::GetSampler,&OutputImp::SetSampler))
+				("Engine",Property(&OutputImp::GetEngine,&OutputImp::SetEngine));
 			return set;
 		}
 
@@ -98,11 +98,13 @@ namespace Raytrace {
 		void*	_pDataOut;
 		size_t	_nDataOut;
 
-		DefaultEngine::Engine	_raytraceEngine;
+		DefaultEngine::EngineType	_raytraceEngine;
+		boost::shared_ptr<ISceneReader> _reader;
 
-		OutputImp(const String& name);
+		OutputImp(const String& name,const boost::shared_ptr<ISceneReader>* reader = nullptr);
 
 		friend Output CreateOutput(const String& name);
+		friend Output CreateCustomOutput(const boost::shared_ptr<ISceneReader>& reader,const String& name);
 	};
 
 };

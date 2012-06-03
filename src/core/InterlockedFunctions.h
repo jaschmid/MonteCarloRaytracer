@@ -113,12 +113,10 @@ inline i16 InterlockedDecrement(volatile i16& p)
 
 /*interlocked compare exchange*/
 
-#ifdef TARGET_X86
-inline u32 InterlockedCompareExchange(volatile size_t& p,size_t exchange, size_t compare)
+inline unsigned int InterlockedCompareExchange(volatile unsigned int& p,u32 exchange, unsigned int compare)
 {
-    return (u32)::InterlockedCompareExchange((volatile i32*)&p,(i32)exchange,(i32)compare);
+    return (unsigned int)::InterlockedCompareExchange((volatile i32*)&p,(i32)exchange,(i32)compare);
 }
-#endif
 
 inline u32 InterlockedCompareExchange(volatile u32& p,u32 exchange, u32 compare)
 {
@@ -206,8 +204,10 @@ template<class _C> inline _C* InterlockedExchange(_C* volatile & p,const _C* exc
 }
 #elif defined(COMPILER_GCC)
 
-namespace Math {
+namespace Raytrace {
 
+// Interlocked Increment	
+	
 inline u32 InterlockedIncrement(volatile u32* p)
 {
     return __sync_add_and_fetch(p,1);
@@ -228,6 +228,28 @@ inline i64 InterlockedIncrement(volatile i64* p)
     return __sync_add_and_fetch(p,1);
 }
 
+inline u32 InterlockedIncrement(volatile u32& p)
+{
+    return __sync_add_and_fetch(&p,1);
+}
+
+inline u64 InterlockedIncrement(volatile u64& p)
+{
+    return __sync_add_and_fetch(&p,1);
+}
+
+inline i32 InterlockedIncrement(volatile i32& p)
+{
+    return __sync_add_and_fetch(&p,1);
+}
+
+inline i64 InterlockedIncrement(volatile i64& p)
+{
+    return __sync_add_and_fetch(&p,1);
+}
+
+// Interlocked Decrement
+
 inline u32 InterlockedDecrement(volatile u32* p)
 {
     return __sync_sub_and_fetch(p,1);
@@ -246,6 +268,58 @@ inline i32 InterlockedDecrement(volatile i32* p)
 inline i64 InterlockedDecrement(volatile i64* p)
 {
     return __sync_sub_and_fetch(p,1);
+}
+
+inline u32 InterlockedDecrement(volatile u32& p)
+{
+    return __sync_sub_and_fetch(&p,1);
+}
+
+inline u64 InterlockedDecrement(volatile u64& p)
+{
+    return __sync_sub_and_fetch(&p,1);
+}
+
+inline i32 InterlockedDecrement(volatile i32& p)
+{
+    return __sync_sub_and_fetch(&p,1);
+}
+
+inline i64 InterlockedDecrement(volatile i64& p)
+{
+    return __sync_sub_and_fetch(&p,1);
+}
+
+/*interlocked compare exchange*/
+
+inline unsigned long InterlockedCompareExchange(volatile unsigned long& p,u32 exchange, unsigned long compare)
+{
+	assert(!"not implemented");
+    return 0;
+}
+
+inline u32 InterlockedCompareExchange(volatile u32& p,u32 exchange, u32 compare)
+{
+	assert(!"not implemented");
+    return 0;
+}
+
+inline u64 InterlockedCompareExchange(volatile u64& p,u64 exchange, u64 compare)
+{
+	assert(!"not implemented");
+    return 0;
+}
+
+inline i32 InterlockedCompareExchange(volatile i32& p,i32 exchange, i32 compare)
+{
+	assert(!"not implemented");
+    return 0;
+}
+
+inline i64 InterlockedCompareExchange(volatile i64& p,i64 exchange, i64 compare)
+{
+	assert(!"not implemented");
+    return 0;
 }
 
 }

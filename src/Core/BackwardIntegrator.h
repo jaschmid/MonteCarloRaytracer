@@ -48,7 +48,7 @@ template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlo
 	
 	struct DirectNode
 	{
-		u32						_shadow;
+		up						_shadow;
 		ColorArray				_color;
 	};
 
@@ -67,6 +67,7 @@ template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlo
 		IntersectionRelative					_intersectionRelative;
 		PrimitiveIdentifier						_id;
 		IntersectionAbsolute					_intersectionAbsolute;
+		size_t									_numIntersections;
 		
 		// Rendering
 
@@ -113,8 +114,11 @@ template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlo
 		_threads.resize(numThreads);
 		_pathArrays[_readPathArray].prepare(numThreads);
 		_pathArrays[_writePathArray].prepare(numThreads);
+		
+		Real fov = scene->getFoV();
+		Real aspect = scene->getAspect();
 
-		_camera.Initialize( Vector2(.75f,.75f));
+		_camera.Initialize( Vector2(fov*aspect,fov));
 		_sampleData = &sampleData;
 		_rayData = &rayData;
 	}
@@ -173,6 +177,7 @@ template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlo
 			path->_importance = ColorArray(1.0f,1.0f,1.0f);
 			path->_cumulativeRoulette = 1.0f;
 			path->_rouletteThreshold = _sampleData->getSampleValueMisc(path->_sample,threadId);
+			path->_numIntersections = 0;
 		}
 
 
@@ -206,7 +211,7 @@ template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlo
 
 	inline void processPath(Path& oldPath,size_t threadId)
 	{
-		static const Real SphereArea = (4.0f*M_PI);
+		static const Real SphereArea = (float)(4.0f*R_PI);
 		static const Real Epsilon = 0.00001f;
 
 		PathsArrayType& pathWrite = _pathArrays[_writePathArray];
@@ -228,6 +233,7 @@ template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlo
 		else
 		{
 			Path* newPath = &oldPath;
+			newPath->_numIntersections = oldPath._numIntersections + 1;
 			newPath->_numDirect = 0;
 			DirectNodeArray& directNodeWrite = threadDataWrite._directNodes[_writePathArray];
 			
@@ -323,7 +329,15 @@ template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlo
 
 	inline void completePath(const Path& path,size_t threadId)
 	{
-		_sampleData->pushCompletedSample( threadId, typename SampleData::SampleOutput( path._sample, path._accumulatedRadiance) );
+		Vector4 result;
+		result.head<3>() = path._accumulatedRadiance;
+
+		if(path._numIntersections)
+			result.w() = 1.0f;
+		else
+			result.w() = 0.0f;
+
+		_sampleData->pushCompletedSample( threadId, typename SampleData::SampleOutput( path._sample, result) );
 	}
 
 
@@ -406,7 +420,7 @@ template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlo
 
 		for(auto it = estimators.begin(); it != estimators.end(); ++it)
 		{
-			it->_factor = GetReflectedFactor(material,primitive,it->_v,toViewer);
+			it->_factor = GetReflectedFactorPoint(material,primitive,it->_v,toViewer);
 			Real max_factor = std::max(std::max(it->_factor.x(),it->_factor.y()),it->_factor.z());
 			it->_c=max_factor;
 
@@ -495,7 +509,7 @@ template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlo
 
 			Real lightDistanceSq = toLight.squaredNorm();
 
-			Real lightArea = lightDistanceSq*4.0f*M_PI;
+			Real lightArea = lightDistanceSq*4.0f*(Real)R_PI;
 
 			toLight.normalize();
 

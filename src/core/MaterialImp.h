@@ -32,16 +32,16 @@ namespace Raytrace {
 		static const PropertyMap& GetPropertySet()
 		{
 			const static PropertyMap set = boost::assign::map_list_of
-				("IOR",Property(&GetIOR,&SetIOR))
-				("emit",Property(&GetEmit,&SetEmit))
-				("diffuse_reflect",Property(&GetDiffuseReflect,&SetDiffuseReflect))
-				("specular_reflect",Property(&GetSpecularReflect,&SetSpecularReflect))
-				("translucency",Property(&GetTranslucency,&SetTranslucency))
-				("transmit_filter",Property(&GetTransmitFilter,&SetTransmitFilter))
-				("transparency",Property(&GetTransparency,&SetTransparency))
-				("fresnel_effect",Property(&GetFresnelEffect,&SetFresnelEffect))
-				("color",Property(&GetColor,&SetColor))
-				("mirror_color",Property(&GetMirrorColor,&SetMirrorColor));
+				("IOR",Property(&MaterialImp::GetIOR,&MaterialImp::SetIOR))
+				("emit",Property(&MaterialImp::GetEmit,&MaterialImp::SetEmit))
+				("diffuse_reflect",Property(&MaterialImp::GetDiffuseReflect,&MaterialImp::SetDiffuseReflect))
+				("specular_reflect",Property(&MaterialImp::GetSpecularReflect,&MaterialImp::SetSpecularReflect))
+				("translucency",Property(&MaterialImp::GetTranslucency,&MaterialImp::SetTranslucency))
+				("transmit_filter",Property(&MaterialImp::GetTransmitFilter,&MaterialImp::SetTransmitFilter))
+				("transparency",Property(&MaterialImp::GetTransparency,&MaterialImp::SetTransparency))
+				("fresnel_effect",Property(&MaterialImp::GetFresnelEffect,&MaterialImp::SetFresnelEffect))
+				("color",Property(&MaterialImp::GetColor,&MaterialImp::SetColor))
+				("mirror_color",Property(&MaterialImp::GetMirrorColor,&MaterialImp::SetMirrorColor));
 			return set;
 		}
 

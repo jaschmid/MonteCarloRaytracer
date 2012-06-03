@@ -81,12 +81,12 @@ struct CompletedSample
 	{
 	}
 	
-	inline CompletedSample(const GeneratedSample& other,const Vector3& result) :_index(other._index),_result(result)
+	inline CompletedSample(const GeneratedSample& other,const Vector4& result) :_index(other._index),_result(result)
 	{
 	}
 
 	up		_index;
-	Vector3	_result;
+	Vector4	_result;
 };
 
 // ray Data
@@ -95,8 +95,8 @@ template<class _RayType,class _PrimitiveType,int _RaysPerBlock> struct SimpleRay
 // sample Data
 template<int _NumSamplesPerBlock,class _SampleValueType,class _SampleIndexType,class _SampleInput,class _SampleOutput> struct SimpleSampleData;
 
-// loaded Scene Reader
-template<class _PrimitiveType> struct LoadedSceneReader;
+// Scene Reader adapter
+template<class _PrimitiveType> struct SceneReaderAdapter;
 
 // samplers
 
@@ -140,20 +140,20 @@ template<class _RayData,class _SampleData,class _SceneReader> struct EngineOptio
 	typedef _RayData RayData;
 	typedef boost::shared_ptr<_SceneReader> SceneReader;
 
-	typedef IIntersector<RayData,SceneReader> IIntersector;
-	typedef ISampler<SampleData,SceneReader> ISampler;
-	typedef IIntegrator<SampleData,RayData,SceneReader> IIntegrator;
-	typedef IEngine<SceneReader> IEngine;
+	typedef IIntersector<RayData,SceneReader> IIntersectorType;
+	typedef ISampler<SampleData,SceneReader> ISamplerType;
+	typedef IIntegrator<SampleData,RayData,SceneReader> IIntegratorType;
+	typedef IEngine<SceneReader> IEngineType;
 
-	typedef boost::shared_ptr<IIntersector> Intersector;
-	typedef boost::shared_ptr<ISampler> Sampler;
-	typedef boost::shared_ptr<IIntegrator> Integrator;
-	typedef ObjectPointer<IEngine> Engine;
+	typedef boost::shared_ptr<IIntersectorType> IntersectorType;
+	typedef boost::shared_ptr<ISamplerType> SamplerType;
+	typedef boost::shared_ptr<IIntegratorType> IntegratorType;
+	typedef ObjectPointer<IEngineType> EngineType;
 
-	typedef std::function<Intersector()> IntersectorConstructor;
-	typedef std::function<Sampler()> SamplerConstructor;
-	typedef std::function<Integrator()> IntegratorConstructor;
-	typedef std::function<Engine(const Intersector& intersector,const Sampler& sampler,const Integrator& integrator,const SceneReader& sceneReader)> EngineConstructor;
+	typedef std::function<IntersectorType()> IntersectorConstructor;
+	typedef std::function<SamplerType()> SamplerConstructor;
+	typedef std::function<IntegratorType()> IntegratorConstructor;
+	typedef std::function<EngineType(const IntersectorType& intersector,const SamplerType& sampler,const IntegratorType& integrator,const SceneReader& sceneReader)> EngineConstructor;
 
 	static const std::map<String,IntersectorConstructor>& getIntersectors()
 	{
@@ -224,7 +224,7 @@ typedef Triangle<> SimpleTriangle;
 typedef EngineOptions<
 	SimpleRayData<SimpleRay,SimpleTriangle,64>,
 	SimpleSampleData<64,Real,up,GeneratedSample,CompletedSample>,
-	LoadedSceneReader<SimpleTriangle>
+	SceneReaderAdapter<SimpleTriangle>
 > DefaultEngine;
 
 }

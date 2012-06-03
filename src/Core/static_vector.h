@@ -24,9 +24,9 @@
 
 namespace Raytrace {
 	
-	template<class _base, int _size> struct static_vector : private std::array<_base,_size>
+	template<class _base, int _Size> struct static_vector : private std::array<_base,_Size>
 	{
-		typedef std::array<_base,_size> Base;
+		typedef std::array<_base,_Size> Base;
 		typedef typename Base::value_type value_type;
 		typedef typename Base::size_type size_type;
 		typedef typename Base::reference reference;

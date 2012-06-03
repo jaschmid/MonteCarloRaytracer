@@ -31,7 +31,7 @@
 namespace Raytrace {
 	
 
-	template<class _Leaf = Triangle,class _Volume = AABB,int _LeafSize = 2,int _NodeSize = 2,class _LeafContainer = std::array<_Leaf,_LeafSize>,class _VolumeContainer = std::array<_Volume,_NodeSize>> struct BVH
+	template<class _Leaf,class _Volume,int _LeafSize = 2,int _NodeSize = 2,class _LeafContainer = std::array<_Leaf,_LeafSize>,class _VolumeContainer = std::array<_Volume,_NodeSize>> struct BVH
 	{
 		static const int NodeSize = _NodeSize;
 		static const int LeafSize = _LeafSize;
@@ -85,17 +85,36 @@ namespace Raytrace {
 					numLeafs ++;
 			}
 
-			_numUsed = 0;
-			_totalMem = numLeafs * sizeof(LeafElement) + numNodes * sizeof(TreeElement);
-			_memory = _aligned_malloc( _totalMem, 64);
+			if(numLeafs != 0)
+			{
 
-			_root = encodeConstructorNodeBreadthFirst( init._rootNode, init );
+				_numUsed = 0;
+				_totalMem = numLeafs * sizeof(LeafElement) + numNodes * sizeof(TreeElement);
+				#ifdef COMPILER_MSVC
+				_memory = _aligned_malloc( _totalMem, 64);
+				#else
+				assert(!"not implemented");
+				#endif
+
+				_root = encodeConstructorNodeBreadthFirst( init._rootNode, init );
+			}
+			else
+			{
+				_numUsed = 0;
+				_totalMem = 0;
+				_memory = nullptr;
+				_root = encodeEmpty();
+			}
 
 		}
 
 		inline ~BVH()
 		{
+			#ifdef COMPILER_MSVC
 			_aligned_free(_memory);
+			#else
+			assert(!"not implemented");
+			#endif
 		}
 		/*
 		struct traverseOrder
@@ -160,7 +179,7 @@ namespace Raytrace {
 				return BVH::getLeaf(_encoded);
 			}
 
-			inline nodeIterator node(/*ChildNodeIndex*/int index) const
+			inline nodeIterator node(/*ChildNodeIndex*/size_t index) const
 			{
 				RAY_ASSERT( index < NodeSize );
 				RAY_ASSERT( !isLeaf() );
@@ -316,23 +335,23 @@ namespace Raytrace {
 
 		inline EncodedElement encodeConstructorNodeDepthFirst(const typename Constructor::Node& root,const Constructor& constructor)
 		{
-			if(node._numChildNodes)
+			if(root._numChildNodes)
 			{
 				//node
 				TreeElement* element = (TreeElement*)getMemory(sizeof(TreeElement));
 				
 				std::array<VolumeItem,NodeSize> subvolumes;
 
-				for(size_t i = 0; i < node._numChildNodes; ++i)
-					subvolumes[i] = constructor._nodes[ node._childNodes[i] ]._bound;
-				for(size_t i = node._numChildNodes; i < NodeSize; ++i)
-					subvolumes[i] = VolumeItem::Empty()
+				for(size_t i = 0; i < root._numChildNodes; ++i)
+					subvolumes[i] = constructor._nodes[ root._childNodes[i] ]._bound;
+				for(size_t i = root._numChildNodes; i < NodeSize; ++i)
+					subvolumes[i] = VolumeItem::Empty();
 
 				new (element) TreeElement(subvolumes);
 						
-				for(size_t i = 0; i < node._numChildNodes; ++i)
-					element->_children[i] = encodeConstructorNode( constructor._nodes[ node._childNodes[i] ], constructor);
-				for(size_t i = node._numChildNodes; i < NodeSize; ++i)
+				for(size_t i = 0; i < root._numChildNodes; ++i)
+					element->_children[i] = encodeConstructorNode( constructor._nodes[ root._childNodes[i] ], constructor);
+				for(size_t i = root._numChildNodes; i < NodeSize; ++i)
 					element->_children[i] = encodeEmpty();
 				
 				//generate traverse order
@@ -355,9 +374,9 @@ namespace Raytrace {
 				
 				std::array<LeafItem,LeafSize> leafs;
 
-				for(size_t i = 0; i < node._childItemEnd-node._childItemBegin; ++i)
-					leafs[i] = constructor._sortedItems[i+node._childItemBegin]->_item;
-				for(size_t i = node._childItemEnd-node._childItemBegin; i < LeafSize; ++i)
+				for(size_t i = 0; i < root._childItemEnd-root._childItemBegin; ++i)
+					leafs[i] = constructor._sortedItems[i+root._childItemBegin]->_item;
+				for(size_t i = root._childItemEnd-root._childItemBegin; i < LeafSize; ++i)
 					leafs[i] = LeafItem::Empty();
 				
 				new (element) LeafElement(leafs);

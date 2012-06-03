@@ -288,12 +288,12 @@ namespace Raytrace {
 			typedef TriangleUserDataType<void> UserDataType;
 			typedef size_t UserData;
 			
-			template<class _Options,class _TriangleUserType> inline TriangleUserData(const TriangleUserData<_Options,_TriangleUserType>& tri) : Base(tri)
+			template<class _Options2,class _TriangleUserType> inline TriangleUserData(const TriangleUserData<_Options2,_TriangleUserType>& tri) : Base(tri)
 			{
 			}
 			
 			template<class _Array,class _Element,int _Size,class _Reader,class _Modifier,class _Adapter> 
-			inline TriangleUserData(const ConstArrayWrapper<_Array,_Element,_Size,_Reader,_Modifier,_Adapter>& arrayBase) : Base(triBase)
+			inline TriangleUserData(const ConstArrayWrapper<_Array,_Element,_Size,_Reader,_Modifier,_Adapter>& arrayBase) : Base(arrayBase)
 			{
 			}
 
@@ -326,9 +326,9 @@ namespace Raytrace {
 			
 
 			//single constructor
-			template<class _Options,class _TriangleUserType> inline TriangleUserData(const TriangleUserData<_Options,_TriangleUserType>& tri) : Base(tri)
+			template<class _Options2,class _TriangleUserType> inline TriangleUserData(const TriangleUserData<_Options2,_TriangleUserType>& tri) : Base(tri)
 			{
-				_userData = tri.user();
+				_userData = (UserData)tri.user();
 			}
 			
 			// array constructor
@@ -368,7 +368,7 @@ namespace Raytrace {
 		}
 
 		//single constructor
-		template<class _Options> inline Triangle(const Triangle<_Options>& tri) : Base(tri)
+		template<class _Options2> inline Triangle(const Triangle<_Options2>& tri) : Base(tri)
 		{
 		}
 			
@@ -380,9 +380,9 @@ namespace Raytrace {
 		static ThisType Empty()
 		{
 			ThisType b;
-			b.setPoint(0,Vector_T(0.0f,0.0f,0.0f));
-			b.setPoint(1,Vector_T(0.0f,0.0f,0.0f));
-			b.setPoint(2,Vector_T(0.0f,0.0f,0.0f));
+			b.setPoint(0,typename Base::Vector_T(0.0f,0.0f,0.0f));
+			b.setPoint(1,typename Base::Vector_T(0.0f,0.0f,0.0f));
+			b.setPoint(2,typename Base::Vector_T(0.0f,0.0f,0.0f));
 			return b;
 		}
 

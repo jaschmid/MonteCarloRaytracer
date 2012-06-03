@@ -19,6 +19,7 @@
 #define RAYTRACE_PROPERTY_SET_GUARD
 
 #include <RaytraceCommon.h>
+#include <RaytraceLexicalCast.h>
 
 namespace Raytrace {
 
@@ -33,6 +34,29 @@ namespace Raytrace {
 	public:
 		virtual Result SetPropertyValue(const String& prop,const String& value) = 0;
 		virtual Result GetPropertyValue(const String& prop,String& value) const = 0;
+
+		template<class _T> inline Result SetPropertyValueTyped(const String& prop,const _T& value)
+		{
+			String buffer;
+			if(!LexicalCast<String,_T>(value,buffer))
+				return Result::UnsupportedObjectType;
+			return SetPropertyValue(prop,value);
+		}
+
+		template<class _T> inline Result GetPropertyValueTyped(const String& prop,_T& value) const
+		{
+			String buffer;
+			Result r = GetPropertyValue(prop,buffer);
+			if(!r)
+				return r;
+			else
+			{
+				if(!LexicalCast<_T,String>(buffer,value))
+					return Result::UnsupportedObjectType;
+				else
+					return r;
+			}
+		}
 	};
 
 }

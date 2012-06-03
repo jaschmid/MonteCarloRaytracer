@@ -29,10 +29,19 @@
 
 namespace Raytrace {
 
-	template<class _PrimitiveType> struct LoadedSceneReader
+	class LoadedSceneReader : public PropertySetImp<LoadedSceneReader,ISceneReader>
 	{
 	public:
-		typedef _PrimitiveType PrimitiveType;
+		static const PropertyMap& GetPropertySet()
+		{
+			const static PropertyMap set = boost::assign::map_list_of
+				(SceneReaderProperty_Resolution,Property(&LoadedSceneReader::GetResolution))
+				(SceneReaderProperty_FieldOfView,Property(&LoadedSceneReader::GetFieldOfView))
+				(SceneReaderProperty_Aspect,Property(&LoadedSceneReader::GetAspect))
+				(SceneReaderProperty_MultisampleCount,Property(&LoadedSceneReader::GetMultisampleCount))
+				(SceneReaderProperty_PrimitiveType_Triangle,Property(&LoadedSceneReader::GetPrimitiveType));
+			return set;
+		}
 
 		LoadedSceneReader(const Scene& scene,const Camera& camera,const Output& output,const Vector2u& resolution)
 		{
@@ -63,11 +72,9 @@ namespace Raytrace {
 			Vector3 up = (camera->GetUp() - from).normalized();
 
 			_viewMatrix = FromLookAt(from,to,up);
-
-			size_t primitives = getNumPrimitives();
 		}
 
-		inline int getNumPrimitives() const
+		virtual size_t GetNumPrimitives() const
 		{
 			if(_primitives.empty())
 				return 0;
@@ -78,13 +85,19 @@ namespace Raytrace {
 			}
 		}
 		
-		inline void getPrimitive(int i,PrimitiveType& t,int& material) const
+		virtual void GetPrimitive(size_t i,void* pPrimitiveOut) const
 		{
+			if(pPrimitiveOut == nullptr)
+				return;
+
+			PrimitiveTriangle* pOut = (PrimitiveTriangle*)pPrimitiveOut;
 			int mat;
 
 			auto it = _primitives.find(i);
 
 			int lower = it->first.lower();
+
+			SimpleTriangle t;
 
 			it->second._triMesh->getTriangle( i - lower, t, mat);
 
@@ -99,31 +112,90 @@ namespace Raytrace {
 			b = _viewMatrix*b;
 			c = _viewMatrix*c;
 
-			t.setPoint(0, a.head<3>());
-			t.setPoint(1, b.head<3>());
-			t.setPoint(2, c.head<3>());
+			pOut->_p1 = a.head<3>();
+			pOut->_p2 = b.head<3>();
+			pOut->_p3 = c.head<3>();
 			
-			material = it->second._materials[mat];
+			pOut->_material = it->second._materials[mat];
 
 			return;
 		}
 
-		inline int getNumMaterials() const
+		virtual size_t GetNumMaterials() const
 		{
-			return (int)_materials.size();
+			return _materials.size();
+		}
+		
+		virtual void			GetMaterial(size_t i,MaterialData* pMaterialOut) const
+		{
+			if(pMaterialOut == nullptr)
+				return;
+
+			pMaterialOut->_color =				_materials[i]->GetColor().head<3>();
+			pMaterialOut->_diffuseReflect =		_materials[i]->GetDiffuseReflect();
+			pMaterialOut->_emit =				_materials[i]->GetEmit();
+			pMaterialOut->_fresnel_effect =		_materials[i]->GetFresnelEffect();
+			pMaterialOut->_ior =				_materials[i]->GetIOR();
+			pMaterialOut->_specular_reflect =	_materials[i]->GetSpecularReflect();
+			pMaterialOut->_translucency =		_materials[i]->GetTranslucency();
+			pMaterialOut->_transmit_filter =	_materials[i]->GetTransmitFilter();
+			pMaterialOut->_transparency =		_materials[i]->GetTransparency();
+			pMaterialOut->_mirror_color =		_materials[i]->GetMirrorColor().head<3>();
+			
 		}
 
-		inline Material getMaterial(int i) const
-		{
-			return _materials[i];
-		}
-
-		inline Vector2u getResolution() const
+		virtual Vector2u GetOutputResolution() const
 		{
 			return _resolution;
 		}
+		
+		virtual size_t			GetNumLights() const
+		{
+			return 0;
+		}
+
+		virtual void			GetLight(size_t i,LightData* pMaterialOut) const
+		{
+			return;
+		}
+		
+		Vector2u		GetBackgroundRadianceSize() const
+		{
+			return Vector2u(1,1);
+		}
+
+		Format			GetBackgroundRadianceFormat() const
+		{
+			return BACKGROUND_FORMAT_RGBA_F32;
+		}
+
+		void 			GetBackgroundRadianceData(void* pData) const
+		{
+			(*(Vector4*)pData) = Vector4(10.0f,10.0f,10.0f,0.0f);
+		}
 
 	private:
+		
+		inline Vector2u GetResolution() const 
+		{
+			return _resolution;
+		}
+		inline Real GetFieldOfView() const 
+		{
+			return _camera->GetFov();
+		}
+		inline Real GetAspect() const 
+		{
+			return _camera->GetAspect();
+		}
+		inline u32 GetMultisampleCount() const 
+		{
+			return 256;
+		}
+		inline String GetPrimitiveType() const 
+		{
+			return SceneReaderProperty_PrimitiveType_Triangle;
+		}
 
 		void parseMaterial(const Material& material)
 		{
@@ -195,6 +267,123 @@ namespace Raytrace {
 		Vector2u									_resolution;
 		public:
 		  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+	};
+
+	template<> struct SceneReaderAdapter<SimpleTriangle>
+	{
+	public:
+		typedef SimpleTriangle PrimitiveType;
+		typedef ISceneReader::MaterialData MaterialData;
+
+		SceneReaderAdapter( const boost::shared_ptr<ISceneReader>& sceneReader) : _sceneReader(sceneReader)
+		{
+		}
+		
+		inline size_t getNumPrimitives() const
+		{
+			return (int)_sceneReader->GetNumPrimitives();
+		}
+		
+		inline void getPrimitive(size_t i,PrimitiveType& t,int& material) const
+		{
+			ISceneReader::PrimitiveTriangle triangle;
+			_sceneReader->GetPrimitive(i,&triangle);
+
+			t.setPoint(0, triangle._p1);
+			t.setPoint(1, triangle._p2);
+			t.setPoint(2, triangle._p3);
+			material = triangle._material;
+		}
+
+		inline size_t getNumMaterials() const
+		{
+			return (int)_sceneReader->GetNumMaterials();
+		}
+		
+		inline size_t getNumLights() const
+		{
+			return _sceneReader->GetNumLights();
+		}
+
+		inline MaterialData getMaterial(size_t i) const
+		{
+			MaterialData material;
+			_sceneReader->GetMaterial(i,&material);
+			return material;
+		}
+
+		inline ISceneReader::LightData getLight(size_t i) const
+		{
+			ISceneReader::LightData lightData;
+			_sceneReader->GetLight(i,&lightData);
+			return lightData;
+		}
+
+		inline Vector2u getBackgroundSize() const
+		{
+			return _sceneReader->GetBackgroundRadianceSize();
+		}
+		
+		inline void getBackgroundData(Vector4* pDataOut) const
+		{
+			assert( _sceneReader->GetBackgroundRadianceFormat() == ISceneReader::BACKGROUND_FORMAT_RGBA_F32);
+			_sceneReader->GetBackgroundRadianceData(pDataOut);
+		}
+
+		inline Vector2u getResolution() const
+		{
+			Vector2u resolution;
+			if(_sceneReader->GetPropertyValueTyped(SceneReaderProperty_Resolution,resolution))
+			{
+				return resolution;
+			}
+			else
+				return Vector2u(240,160);
+
+		}
+		
+		inline u32 getMultisampleCount() const
+		{
+			u32 count;
+			if(_sceneReader->GetPropertyValueTyped(SceneReaderProperty_MultisampleCount,count))
+			{
+				return count;
+			}
+			else
+				return 1;
+
+		}
+		
+		inline Real getFoV() const
+		{
+			Real fov;
+			if(_sceneReader->GetPropertyValueTyped(SceneReaderProperty_FieldOfView,fov))
+			{
+				return fov;
+			}
+			else
+				return .75f;
+
+		}
+		
+		inline Real getAspect() const
+		{
+			Real aspect;
+			if(_sceneReader->GetPropertyValueTyped(SceneReaderProperty_Aspect,aspect))
+			{
+				return aspect;
+			}
+			else
+			{
+				Vector2u res = getResolution();
+
+				return (Real)res.x() / (Real)res.y();
+			}
+
+		}
+	private:
+
+		boost::shared_ptr<ISceneReader> _sceneReader;
 	};
 
 

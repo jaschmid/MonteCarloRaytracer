@@ -13,7 +13,7 @@ CurrentFileName        :=
 CurrentFilePath        :=
 CurrentFileFullPath    :=
 User                   :=Jan Schmid
-Date                   :=12/01/2011
+Date                   :=12/09/2011
 CodeLitePath           :="/home/jaschmid/.codelite"
 LinkerName             :=g++
 ArchiveTool            :=ar rcus
@@ -52,9 +52,9 @@ LibPath                := $(LibraryPathSwitch).
 ## User defined environment variables
 ##
 CodeLiteDir:=/usr/share/codelite
-Objects=$(IntermediateDirectory)/Core_XmlParserImp$(ObjectSuffix) $(IntermediateDirectory)/Core_WhittedIntegrator$(ObjectSuffix) $(IntermediateDirectory)/Core_TriMeshImp$(ObjectSuffix) $(IntermediateDirectory)/Core_BVHIntersector$(ObjectSuffix) $(IntermediateDirectory)/Core_CameraImp$(ObjectSuffix) $(IntermediateDirectory)/Core_DummyEngine$(ObjectSuffix) $(IntermediateDirectory)/Core_EngineBase$(ObjectSuffix) $(IntermediateDirectory)/Core_Engines$(ObjectSuffix) $(IntermediateDirectory)/Core_FastEngine$(ObjectSuffix) $(IntermediateDirectory)/Core_headers$(ObjectSuffix) \
-	$(IntermediateDirectory)/Core_ImageWriter$(ObjectSuffix) $(IntermediateDirectory)/Core_MaterialImp$(ObjectSuffix) $(IntermediateDirectory)/Core_MCSampler$(ObjectSuffix) $(IntermediateDirectory)/Core_ObjectTypeDefinitions$(ObjectSuffix) $(IntermediateDirectory)/Core_OutputImp$(ObjectSuffix) $(IntermediateDirectory)/Core_ResultDefinitions$(ObjectSuffix) $(IntermediateDirectory)/Core_SceneImp$(ObjectSuffix) $(IntermediateDirectory)/Core_SimpleEngine$(ObjectSuffix) $(IntermediateDirectory)/Core_SimpleIntersector$(ObjectSuffix) $(IntermediateDirectory)/TinyXml_tinystr$(ObjectSuffix) \
-	$(IntermediateDirectory)/TinyXml_tinyxml$(ObjectSuffix) $(IntermediateDirectory)/TinyXml_tinyxmlerror$(ObjectSuffix) $(IntermediateDirectory)/TinyXml_tinyxmlparser$(ObjectSuffix) 
+Objects=$(IntermediateDirectory)/Core_XmlParserImp$(ObjectSuffix) $(IntermediateDirectory)/Core_WhittedIntegrator$(ObjectSuffix) $(IntermediateDirectory)/Core_TriMeshImp$(ObjectSuffix) $(IntermediateDirectory)/Core_BVHIntersector$(ObjectSuffix) $(IntermediateDirectory)/Core_CameraImp$(ObjectSuffix) $(IntermediateDirectory)/Core_EngineBase$(ObjectSuffix) $(IntermediateDirectory)/Core_Engines$(ObjectSuffix) $(IntermediateDirectory)/Core_headers$(ObjectSuffix) $(IntermediateDirectory)/Core_ImageWriter$(ObjectSuffix) $(IntermediateDirectory)/Core_MaterialImp$(ObjectSuffix) \
+	$(IntermediateDirectory)/Core_MCSampler$(ObjectSuffix) $(IntermediateDirectory)/Core_ObjectTypeDefinitions$(ObjectSuffix) $(IntermediateDirectory)/Core_OutputImp$(ObjectSuffix) $(IntermediateDirectory)/Core_ResultDefinitions$(ObjectSuffix) $(IntermediateDirectory)/Core_SceneImp$(ObjectSuffix) $(IntermediateDirectory)/Core_SimpleEngine$(ObjectSuffix) $(IntermediateDirectory)/Core_SimpleIntersector$(ObjectSuffix) $(IntermediateDirectory)/TinyXml_tinystr$(ObjectSuffix) $(IntermediateDirectory)/TinyXml_tinyxml$(ObjectSuffix) $(IntermediateDirectory)/TinyXml_tinyxmlerror$(ObjectSuffix) \
+	$(IntermediateDirectory)/TinyXml_tinyxmlparser$(ObjectSuffix) 
 
 ##
 ## Main Build Targets 
@@ -119,14 +119,6 @@ $(IntermediateDirectory)/Core_CameraImp$(DependSuffix): ../../src/Core/CameraImp
 $(IntermediateDirectory)/Core_CameraImp$(PreprocessSuffix): ../../src/Core/CameraImp.cpp
 	@$(CompilerName) $(CmpOptions) $(IncludePCH) $(IncludePath) $(PreprocessOnlySwitch) $(OutputSwitch) $(IntermediateDirectory)/Core_CameraImp$(PreprocessSuffix) "/home/jaschmid/Dropbox/School/TNCG15/Raytracer/src/Core/CameraImp.cpp"
 
-$(IntermediateDirectory)/Core_DummyEngine$(ObjectSuffix): ../../src/Core/DummyEngine.cpp $(IntermediateDirectory)/Core_DummyEngine$(DependSuffix)
-	$(CompilerName) $(IncludePCH) $(SourceSwitch) "/home/jaschmid/Dropbox/School/TNCG15/Raytracer/src/Core/DummyEngine.cpp" $(CmpOptions) $(ObjectSwitch)$(IntermediateDirectory)/Core_DummyEngine$(ObjectSuffix) $(IncludePath)
-$(IntermediateDirectory)/Core_DummyEngine$(DependSuffix): ../../src/Core/DummyEngine.cpp
-	@$(CompilerName) $(CmpOptions) $(IncludePCH) $(IncludePath) -MG -MP -MT$(IntermediateDirectory)/Core_DummyEngine$(ObjectSuffix) -MF$(IntermediateDirectory)/Core_DummyEngine$(DependSuffix) -MM "/home/jaschmid/Dropbox/School/TNCG15/Raytracer/src/Core/DummyEngine.cpp"
-
-$(IntermediateDirectory)/Core_DummyEngine$(PreprocessSuffix): ../../src/Core/DummyEngine.cpp
-	@$(CompilerName) $(CmpOptions) $(IncludePCH) $(IncludePath) $(PreprocessOnlySwitch) $(OutputSwitch) $(IntermediateDirectory)/Core_DummyEngine$(PreprocessSuffix) "/home/jaschmid/Dropbox/School/TNCG15/Raytracer/src/Core/DummyEngine.cpp"
-
 $(IntermediateDirectory)/Core_EngineBase$(ObjectSuffix): ../../src/Core/EngineBase.cpp $(IntermediateDirectory)/Core_EngineBase$(DependSuffix)
 	$(CompilerName) $(IncludePCH) $(SourceSwitch) "/home/jaschmid/Dropbox/School/TNCG15/Raytracer/src/Core/EngineBase.cpp" $(CmpOptions) $(ObjectSwitch)$(IntermediateDirectory)/Core_EngineBase$(ObjectSuffix) $(IncludePath)
 $(IntermediateDirectory)/Core_EngineBase$(DependSuffix): ../../src/Core/EngineBase.cpp
@@ -142,14 +134,6 @@ $(IntermediateDirectory)/Core_Engines$(DependSuffix): ../../src/Core/Engines.cpp
 
 $(IntermediateDirectory)/Core_Engines$(PreprocessSuffix): ../../src/Core/Engines.cpp
 	@$(CompilerName) $(CmpOptions) $(IncludePCH) $(IncludePath) $(PreprocessOnlySwitch) $(OutputSwitch) $(IntermediateDirectory)/Core_Engines$(PreprocessSuffix) "/home/jaschmid/Dropbox/School/TNCG15/Raytracer/src/Core/Engines.cpp"
-
-$(IntermediateDirectory)/Core_FastEngine$(ObjectSuffix): ../../src/Core/FastEngine.cpp $(IntermediateDirectory)/Core_FastEngine$(DependSuffix)
-	$(CompilerName) $(IncludePCH) $(SourceSwitch) "/home/jaschmid/Dropbox/School/TNCG15/Raytracer/src/Core/FastEngine.cpp" $(CmpOptions) $(ObjectSwitch)$(IntermediateDirectory)/Core_FastEngine$(ObjectSuffix) $(IncludePath)
-$(IntermediateDirectory)/Core_FastEngine$(DependSuffix): ../../src/Core/FastEngine.cpp
-	@$(CompilerName) $(CmpOptions) $(IncludePCH) $(IncludePath) -MG -MP -MT$(IntermediateDirectory)/Core_FastEngine$(ObjectSuffix) -MF$(IntermediateDirectory)/Core_FastEngine$(DependSuffix) -MM "/home/jaschmid/Dropbox/School/TNCG15/Raytracer/src/Core/FastEngine.cpp"
-
-$(IntermediateDirectory)/Core_FastEngine$(PreprocessSuffix): ../../src/Core/FastEngine.cpp
-	@$(CompilerName) $(CmpOptions) $(IncludePCH) $(IncludePath) $(PreprocessOnlySwitch) $(OutputSwitch) $(IntermediateDirectory)/Core_FastEngine$(PreprocessSuffix) "/home/jaschmid/Dropbox/School/TNCG15/Raytracer/src/Core/FastEngine.cpp"
 
 $(IntermediateDirectory)/Core_headers$(ObjectSuffix): ../../src/Core/headers.cpp $(IntermediateDirectory)/Core_headers$(DependSuffix)
 	$(CompilerName) $(IncludePCH) $(SourceSwitch) "/home/jaschmid/Dropbox/School/TNCG15/Raytracer/src/Core/headers.cpp" $(CmpOptions) $(ObjectSwitch)$(IntermediateDirectory)/Core_headers$(ObjectSuffix) $(IncludePath)
@@ -284,18 +268,12 @@ clean:
 	$(RM) $(IntermediateDirectory)/Core_CameraImp$(ObjectSuffix)
 	$(RM) $(IntermediateDirectory)/Core_CameraImp$(DependSuffix)
 	$(RM) $(IntermediateDirectory)/Core_CameraImp$(PreprocessSuffix)
-	$(RM) $(IntermediateDirectory)/Core_DummyEngine$(ObjectSuffix)
-	$(RM) $(IntermediateDirectory)/Core_DummyEngine$(DependSuffix)
-	$(RM) $(IntermediateDirectory)/Core_DummyEngine$(PreprocessSuffix)
 	$(RM) $(IntermediateDirectory)/Core_EngineBase$(ObjectSuffix)
 	$(RM) $(IntermediateDirectory)/Core_EngineBase$(DependSuffix)
 	$(RM) $(IntermediateDirectory)/Core_EngineBase$(PreprocessSuffix)
 	$(RM) $(IntermediateDirectory)/Core_Engines$(ObjectSuffix)
 	$(RM) $(IntermediateDirectory)/Core_Engines$(DependSuffix)
 	$(RM) $(IntermediateDirectory)/Core_Engines$(PreprocessSuffix)
-	$(RM) $(IntermediateDirectory)/Core_FastEngine$(ObjectSuffix)
-	$(RM) $(IntermediateDirectory)/Core_FastEngine$(DependSuffix)
-	$(RM) $(IntermediateDirectory)/Core_FastEngine$(PreprocessSuffix)
 	$(RM) $(IntermediateDirectory)/Core_headers$(ObjectSuffix)
 	$(RM) $(IntermediateDirectory)/Core_headers$(DependSuffix)
 	$(RM) $(IntermediateDirectory)/Core_headers$(PreprocessSuffix)

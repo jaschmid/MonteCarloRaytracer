@@ -151,7 +151,7 @@ template<class _RayData,class _SceneReader,int _SimdWidth> struct SimpleIntersec
 	}
 	
 
-	template<class _RayType> inline void doIntersections(int threadId)
+	template<class _RayType> inline void doIntersections(size_t threadId)
 	{
 		typename RayData::Element<_RayType> element;
 		while(_rayData->popRay<_RayType>(threadId,element))

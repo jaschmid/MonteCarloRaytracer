@@ -60,7 +60,7 @@ namespace Raytrace {
 			
 	private:
 
-		template<class _Leaf,class _Volume,int _NodeSize,int _LeafSize,class _LeafContainer,class _VolumeContainer> friend struct BVH;
+		template<class _Leaf2,class _Volume2,int _NodeSize2,int _LeafSize2,class _LeafContainer2,class _VolumeContainer2> friend struct BVH;
 
 		void constructFinal()
 		{
@@ -156,7 +156,7 @@ namespace Raytrace {
 			child._numChildNodes = 0;
 			initializeLeaf(child,child._childItemBegin,child._childItemEnd);
 
-			int childId = _nodes.size();
+			size_t childId = _nodes.size();
 			_nodes.push_back(child);
 
 			multi._childItemBegin = 0;
@@ -345,7 +345,7 @@ namespace Raytrace {
 				return;
 			}
 			
-			int iLeft = itemBegin, iRight = itemEnd - 1;
+			size_t iLeft = itemBegin, iRight = itemEnd - 1;
 
 			while(iLeft < iRight)
 			{

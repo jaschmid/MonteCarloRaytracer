@@ -1,6 +1,6 @@
 #include "headers.h"
 #include <RaytraceCommon.h>
-#include <Math/InterlockedFunctions.h>
+#include "InterlockedFunctions.h"
 #include "EngineBase.h"
 #include "RayData.h"
 #include "SampleData.h"
@@ -57,9 +57,9 @@ const std::array<String,7> BasicRaytraceEngine<_RayData,_SampleData,_SceneReader
 
 template<class _RayData,class _SampleData,class _SceneReader>
 BasicRaytraceEngine<_RayData,_SampleData,_SceneReader>::BasicRaytraceEngine(
-	const Intersector& intersector,
-	const Sampler& sampler,
-	const Integrator& integrator,
+	const IntersectorType& intersector,
+	const SamplerType& sampler,
+	const IntegratorType& integrator,
 	const SceneReader& sceneReader) :
 	_intersector(intersector),
 	_sampler(sampler),
@@ -91,8 +91,6 @@ BasicRaytraceEngine<_RayData,_SampleData,_SceneReader>::BasicRaytraceEngine(
 	startFunc._parent = this;
 	
 	_threadCompletionCounter = _numThreads;
-	//ref count that will be released by the last thread leaving
-	AddRef();
 	//start threads, whee!
 	for(int i = 0; i < _numThreads; ++i)
 		_threads[i]._threadPointer = _threadGroup.create_thread(startFunc);
@@ -102,7 +100,6 @@ BasicRaytraceEngine<_RayData,_SampleData,_SceneReader>::BasicRaytraceEngine(
 template<class _RayData,class _SampleData,class _SceneReader>
 BasicRaytraceEngine<_RayData,_SampleData,_SceneReader>::~BasicRaytraceEngine() 
 {
-	assert(_threadTerminateCounter == 0);
 	_threads.clear();
 }
 
@@ -184,6 +181,11 @@ Result BasicRaytraceEngine<_RayData,_SampleData,_SceneReader>::GetStatus(const S
 		text << raysSec << String(" rays/second ");
 
 		status_out = text.str();
+
+		if(_progress < 1.0f)
+			return Result::RenderingInProgress;
+		else
+			return Result::RenderingComplete;
 	}
 
 	return Result::Failed;
@@ -239,6 +241,7 @@ void BasicRaytraceEngine<_RayData,_SampleData,_SceneReader>::TerminateThreads()
 template<class _RayData,class _SampleData,class _SceneReader>
 void BasicRaytraceEngine<_RayData,_SampleData,_SceneReader>::ThreadEnter()
 {
+	AddRef();
 	_startupBarrier->wait();
 
 	int id = -1;
@@ -300,10 +303,7 @@ void BasicRaytraceEngine<_RayData,_SampleData,_SceneReader>::ThreadEnter()
 		myMode = _nextMode;
 	}
 
-	i32 count = InterlockedDecrement(_threadTerminateCounter);
-
-	if(count == 0)
-		Release();
+	Release();
 
 }
 
@@ -419,6 +419,7 @@ typename BasicRaytraceEngine<_RayData,_SampleData,_SceneReader>::MODE BasicRaytr
 		{
 			_totalEndTime = boost::posix_time::microsec_clock::local_time().time_of_day().total_microseconds();
 			nextMode = COMPLETE;
+			_progress = 1.0f;
 		}
 		break;
 	case INTEGRATE:

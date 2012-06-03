@@ -29,6 +29,7 @@ template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlo
 	typedef _SampleData SampleData;
 	typedef _RayData RayData;
 	typedef _SceneReader SceneReader;
+	typedef IntegratorBase<_SampleData,_RayData,_SceneReader> Base;
 
 	typedef typename RayData::PrimitiveType PrimitiveType;
 	typedef typename RayData::RayType RayType;
@@ -54,7 +55,7 @@ template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlo
 
 	struct DirectNode
 	{
-		u32						_shadow;
+		up						_shadow;
 		Vector3					_color;
 	};
 
@@ -63,6 +64,7 @@ template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlo
 		typename SampleData::SampleInput		_sample;
 		Vector3						_color;
 		size_t						_threadId;
+		size_t						_numIntersections;
 
 		size_t						_firstIndirect;
 		size_t						_numIndirect;
@@ -95,7 +97,10 @@ template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlo
 		_pathArrays[_readPathArray].prepare(numThreads);
 		_pathArrays[_writePathArray].prepare(numThreads);
 
-		_camera.Initialize( Vector2(.75f,.75f));
+		Real fov = scene->getFoV();
+		Real aspect = scene->getAspect();
+
+		_camera.Initialize( Vector2(fov*aspect,fov));
 
 		_sampleData = &sampleData;
 		_rayData = &rayData;
@@ -207,7 +212,10 @@ template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlo
 		if(path._numIndirect ==0)
 		{
 			completePathDirectLight(path,directNodeRead);
-			_sampleData->pushCompletedSample( threadId, typename SampleData::SampleOutput( path._sample, path._color) );
+			Vector4 result;
+			result.head<3>() = path._color;
+			result.w() = 1.0f;
+			_sampleData->pushCompletedSample( threadId, typename SampleData::SampleOutput( path._sample, result) );
 		}
 		else
 		{
@@ -366,7 +374,7 @@ template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlo
 			return getBackgroundColor(-node._parentDir);
 	}
 	
-	inline void CalculateLighting( const Light& light, const IndirectNode& node, Vector3& color)
+	inline void CalculateLighting( const typename Base::Light& light, const IndirectNode& node, Vector3& color)
 	{
 		const PrimitiveData& primitive = _primitives[node._id];
 		const MaterialSettings& material = _materials[primitive._material];

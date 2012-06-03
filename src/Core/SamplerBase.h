@@ -20,7 +20,7 @@
 #define RAYTRACE_SAMPLER_BASE_GUARD
 
 #include <RaytraceCommon.h>
-#include <Math/InterlockedFunctions.h>
+#include "InterlockedFunctions.h"
 #include "MathHelper.h"
 #include "SampleData.h"
 #include "ISampler.h"
@@ -171,27 +171,70 @@ template<class _SampleData,class _SceneReader> struct SamplerBase : public ISamp
 
 		for(size_t i = begin1; i < end1; ++i)
 		{
-			Vector3 color = _finalImage[i].Mean();
-			color = (color.array() / (color.array() + Vector3(1.0f,1.0f,1.0f).array())).matrix();
+			Vector4 color = _finalImage[i].Mean();
+
+			color.head<3>() = (color.head<3>().array() / (color.head<3>().array() + Vector3(1.0f,1.0f,1.0f).array())).matrix();
 
 			out( (u32)(i % _imageSize.x()) , (u32)(i / _imageSize.x()) ) = Pixel<_Format>(Pixel<RGBA_FLOAT32>(
 					std::min<f32>(1.0f,std::max<f32>(0.0f,color.x())),
 					std::min<f32>(1.0f,std::max<f32>(0.0f,color.y())),
 					std::min<f32>(1.0f,std::max<f32>(0.0f,color.z())),
-					1.0f
+					std::min<f32>(1.0f,std::max<f32>(0.0f,color.w()))
 				));
 		}
 		for(size_t i = begin2; i < end2; ++i)
 		{
-			Vector3 color = _finalImage[i].Mean();
-			color = (color.array() / (color.array() + Vector3(1.0f,1.0f,1.0f).array())).matrix();
+			Vector4 color = _finalImage[i].Mean();
+
+			color.head<3>() = (color.head<3>().array() / (color.head<3>().array() + Vector3(1.0f,1.0f,1.0f).array())).matrix();
 
 			out( (u32)(i % _imageSize.x()) , (u32)(i / _imageSize.x()) ) = Pixel<_Format>(Pixel<RGBA_FLOAT32>(
 					std::min<f32>(1.0f,std::max<f32>(0.0f,color.x())),
 					std::min<f32>(1.0f,std::max<f32>(0.0f,color.y())),
 					std::min<f32>(1.0f,std::max<f32>(0.0f,color.z())),
-					1.0f
+					std::min<f32>(1.0f,std::max<f32>(0.0f,color.w()))
 				));
+		}
+	}
+	
+	template<> inline void Gather<RGBA_FLOAT32>(ImageRect<RGBA_FLOAT32> out) const
+	{
+		up completed = _numCompletedSamples;
+
+		if(_numDrawnSamples >= completed)
+			return;
+
+		size_t range = (size_t)std::min<up>(completed - _numDrawnSamples,(up)_finalImage.size());
+
+		size_t begin1,end1;
+		size_t begin2,end2;
+
+		begin1 = (size_t)(_numDrawnSamples%(up)_finalImage.size());
+		end1 = begin1 + range;
+		if(end1 > _finalImage.size())
+		{
+			begin2 = 0;
+			end2 = end1 - _finalImage.size();
+			end1 = _finalImage.size();
+		}
+		else
+		{
+			begin2 = end2 = end1;
+		}
+
+		_numDrawnSamples = completed;
+
+		for(size_t i = begin1; i < end1; ++i)
+		{
+			Vector4 color = _finalImage[i].Mean();
+			color.w() = std::min<f32>(1.0f,std::max<f32>(0.0f,color.w()));
+			out( (u32)(i % _imageSize.x()) , (u32)(i / _imageSize.x()) ) = Pixel<RGBA_FLOAT32>(color);
+		}
+		for(size_t i = begin2; i < end2; ++i)
+		{
+			Vector4 color = _finalImage[i].Mean();
+			color.w() = std::min<f32>(1.0f,std::max<f32>(0.0f,color.w()));
+			out( (u32)(i % _imageSize.x()) , (u32)(i / _imageSize.x()) ) = Pixel<RGBA_FLOAT32>(color);
 		}
 	}
 
@@ -219,18 +262,18 @@ template<class _SampleData,class _SceneReader> struct SamplerBase : public ISamp
 	struct FinalImageElement
 	{
 		
-		Vector3				_mean;
-		Vector3				_s;
+		Vector4				_mean;
+		Vector4				_s;
 		size_t				_numSamples;
 
 		inline FinalImageElement() : _numSamples(0) {}
 
-		inline void pushData(const Vector3& element)
+		inline void pushData(const Vector4& element)
 		{
 			if(_numSamples)
 			{
 				++_numSamples;
-				Vector3 newMean = _mean + (element - _mean)/(Real)_numSamples;
+				Vector4 newMean = _mean + (element - _mean)/(Real)_numSamples;
 				_s += ((element - _mean).array()/(element - newMean).array()).matrix();
 				_mean = newMean;
 			}
@@ -238,17 +281,17 @@ template<class _SampleData,class _SceneReader> struct SamplerBase : public ISamp
 			{
 				_numSamples = 1;
 				_mean = element;
-				_s = Vector3(0.0f,0.0f,0.0f);
+				_s = Vector4(0.0f,0.0f,0.0f,0.0f);
 			}
 		}
 
 		inline Real Variance() const
 		{
-			Vector4 variance = (_numSamples > 1) ? (_s/(Real)(_numSamples - 1) ) : (Vector3(0.0f,0.0f,0.0f));
+			Vector4 variance = (_numSamples > 1) ? Vector4(_s/(Real)(_numSamples - 1) ) : Vector4(0.0f,0.0f,0.0f,0.0f);
 			return variance.x() + variance.y() + variance.z() + variance.w();
 		}
 
-		inline Vector3 Mean() const
+		inline Vector4 Mean() const
 		{
 			return _mean;
 		}

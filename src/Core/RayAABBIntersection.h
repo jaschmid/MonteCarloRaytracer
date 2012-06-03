@@ -55,36 +55,7 @@ namespace detail{
 	};
 
 	// _RayType,class _AABBType,int _RayCount,int _AABBCount
-	template<class _Options,class _Method> struct RayAABBIntersectionBase
-	{
-		typedef typename getOptionByTag<_Options,Tag_RayType>::type::RayType RayType;
-		typedef typename getOptionByTag<_Options,Tag_PrimitiveType>::type::PrimitiveType AABBType;
-		typedef _Method Method;
-
-		static const size_t RayCount = getOptionByTag<_Options,Tag_PrimitiveType>::type::value;
-		static const size_t AABBCount = getOptionByTag<_Options,Tag_PrimitiveType>::type::value;
-		static const size_t ResultCount = RayCount*AABBCount;
-		
-		typedef typename RayType::Scalar_T Ray_Scalar_T;
-		typedef typename RayType::Vector_T Ray_Vector_T;
-		typedef typename Ray_Scalar_T::Boolean Ray_Boolean;
-		typedef typename Ray_Scalar_T::BooleanMask Ray_BooleanMask;
-
-		typedef typename AABBType::Scalar_T AABB_Scalar_T;
-		typedef typename AABBType::Vector_T AABB_Vector_T;
-		typedef typename AABB_Scalar_T::Boolean AABB_Boolean;
-		typedef typename AABB_Scalar_T::BooleanMask AABB_BooleanMask;
-	
-		typedef typename findCommonType<Ray_Scalar_T,AABB_Scalar_T>::type Scalar_T;
-		typedef typename findCommonType<Ray_Vector_T,AABB_Vector_T>::type Vector_T;
-		typedef typename findCommonType<Ray_Boolean,AABB_Boolean>::type Boolean;
-		typedef typename findCommonType<Ray_BooleanMask,AABB_BooleanMask>::type BooleanMask;
-
-		inline RayAABBIntersectionBase()
-		{
-			static_assert(false,"Unknown AABBIntersection Method");
-		}
-	};
+	template<class _Options,class _Method> struct RayAABBIntersectionBase;
 
 	template<class _Options> struct RayAABBIntersectionBase<_Options,RayAABBIntersectionMethodWilliams>
 	{
@@ -208,19 +179,19 @@ template<class _Options,class _Method,class _RayMode> struct RayAABBIntersection
 	{
 		// check for hit
 		
-		std::array<Scalar_T,ResultCount> tMin;
-		std::array<Scalar_T,ResultCount> tMax;
-		std::array<Boolean,ResultCount> valid;
+		std::array<typename Base::Scalar_T,Base::ResultCount> tMin;
+		std::array<typename Base::Scalar_T,Base::ResultCount> tMax;
+		std::array<typename Base::Boolean,Base::ResultCount> valid;
 
 		Base::operator()(rawRays,rawAABBs,tMin,tMax,valid);
 		
-		ArrayWrapper<_RawTArray,Scalar_T,ResultCount> t(rawT);
-		ArrayWrapper<_RawResultArray,BooleanMask,ResultCount> result(rawResult);
+		ArrayWrapper<_RawTArray,typename Base::Scalar_T,Base::ResultCount> t(rawT);
+		ArrayWrapper<_RawResultArray,typename Base::BooleanMask,Base::ResultCount> result(rawResult);
 
-		for(int i = 0; i < ResultCount; ++i)
+		for(int i = 0; i < Base::ResultCount; ++i)
 		{
 			valid[i]  &= (tMin[i] < t[i] );
-			valid[i]  &= (tMax[i] > Scalar_T::Epsilon());
+			valid[i]  &= (tMax[i] > typename Base::Scalar_T::Epsilon());
 			t[i].ConditionalAssign(valid[i], tMin[i], t[i]);
 			result[i] = valid[i].mask();
 		}
@@ -242,19 +213,19 @@ template<class _Options,class _Method> struct RayAABBIntersection<_Options,_Meth
 	{
 		// check for hit
 		
-		std::array<Scalar_T,ResultCount> tMin;
-		std::array<Scalar_T,ResultCount> tMax;
-		std::array<Boolean,ResultCount> valid;
+		std::array<typename Base::Scalar_T,Base::ResultCount> tMin;
+		std::array<typename Base::Scalar_T,Base::ResultCount> tMax;
+		std::array<typename Base::Boolean,Base::ResultCount> valid;
 
 		Base::operator()(rawRays,rawAABBs,tMin,tMax,valid);
 		
-		ConstArrayWrapper<_RawTArray,Scalar_T,RayCount> t(rawT);
-		ArrayWrapper<_RawResultArray,BooleanMask,ResultCount> result(rawResult);
+		ConstArrayWrapper<_RawTArray,typename Base::Scalar_T,Base::RayCount> t(rawT);
+		ArrayWrapper<_RawResultArray,typename Base::BooleanMask,Base::ResultCount> result(rawResult);
 
-		for(int i = 0; i < ResultCount; ++i)
+		for(int i = 0; i < Base::ResultCount; ++i)
 		{
-			valid[i]  &= (tMin[i] < t[i/AABBCount] );
-			valid[i]  &= (tMax[i] > Scalar_T::Epsilon());
+			valid[i]  &= (tMin[i] < t[i/Base::AABBCount] );
+			valid[i]  &= (tMax[i] > typename Base::Scalar_T::Epsilon());
 			result[i] = valid[i].mask();
 		}
 	}

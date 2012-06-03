@@ -1,6 +1,6 @@
 #include "headers.h"
 #include <RaytraceCommon.h>
-#include <Math/InterlockedFunctions.h>
+#include "InterlockedFunctions.h"
 #include "Engines.h"
 
 #include "WhittedIntegrator.h"

@@ -54,37 +54,7 @@ namespace detail{
 	};
 
 	
-	template<class _Options,class _Method> struct RayTriangleIntersectionBase
-	{
-		typedef typename getOptionByTag<_Options,Tag_RayType>::type::RayType RayType;
-		typedef typename getOptionByTag<_Options,Tag_PrimitiveType>::type::PrimitiveType TriangleType;
-		typedef _Method Method;
-	
-		static const size_t RayCount = getOptionByTag<_Options,Tag_RayCount>::type::value;
-		static const size_t TriangleCount = getOptionByTag<_Options,Tag_PrimitiveCount>::type::value;
-		static const size_t ResultCount = RayCount*TriangleCount;
-		
-		typedef typename RayType::Scalar_T Ray_Scalar_T;
-		typedef typename RayType::Vector_T Ray_Vector_T;
-		typedef typename Ray_Scalar_T::Boolean Ray_Boolean;
-		typedef typename Ray_Scalar_T::BooleanMask Ray_BooleanMask;
-
-		typedef typename TriangleType::Scalar_T Triangle_Scalar_T;
-		typedef typename TriangleType::Vector_T Triangle_Vector_T;
-		typedef typename Triangle_Scalar_T::Boolean Triangle_Boolean;
-		typedef typename Triangle_Scalar_T::BooleanMask Triangle_BooleanMask;
-	
-		typedef typename findCommonType<Ray_Scalar_T,Triangle_Scalar_T>::type Scalar_T;
-		typedef typename findCommonType<Ray_Vector_T,Triangle_Vector_T>::type Vector_T;
-		typedef typename findCommonType<Ray_Boolean,Triangle_Boolean>::type Boolean;
-		typedef typename findCommonType<Ray_BooleanMask,Triangle_BooleanMask>::type BooleanMask;
-		typedef Eigen::Matrix<Scalar_T,2,1>		Vector2_T;
-
-		inline RayTriangleIntersectionBase()
-		{
-			static_assert(false,"Unknown TriangleIntersection Method");
-		}
-	};
+	template<class _Options,class _Method> struct RayTriangleIntersectionBase;
 
 	template<class _Options> struct RayTriangleIntersectionBase<_Options,RayTriangleIntersectionMethodHavel>
 	{
@@ -180,30 +150,30 @@ template<class _Options,class _Method,class _RayMode> struct RayTriangleIntersec
 	{
 		// check for hit
 		
-		std::array<Vector2_T,ResultCount> uvFound;
-		std::array<Scalar_T,ResultCount> tFound;
-		std::array<Boolean,ResultCount> valid;
+		std::array<typename Base::Vector2_T,Base::ResultCount> uvFound;
+		std::array<typename Base::Scalar_T,Base::ResultCount> tFound;
+		std::array<typename Base::Boolean,Base::ResultCount> valid;
 
 		Base::operator()(rawRays,rawTriangles,tFound,uvFound,valid);
 		
-		ConstArrayWrapper<_RawTriangleArray,TriangleType,TriangleCount> triangles(rawTriangles);
-		ArrayWrapper<_RawTArray,Scalar_T,RayCount> t(rawT);
-		ArrayWrapper<_RawUVArray,Vector2_T,RayCount> uv(rawUV);
-		ArrayWrapper<_RawIdArray,typename TriangleType::UserData,RayCount> ids(rawId);
+		ConstArrayWrapper<_RawTriangleArray,typename Base::TriangleType,Base::TriangleCount> triangles(rawTriangles);
+		ArrayWrapper<_RawTArray,typename Base::Scalar_T,Base::RayCount> t(rawT);
+		ArrayWrapper<_RawUVArray,typename Base::Vector2_T,Base::RayCount> uv(rawUV);
+		ArrayWrapper<_RawIdArray,typename Base::TriangleType::UserData,Base::RayCount> ids(rawId);
 
 		bool result = false;
 		
-		for(int i = 0; i < RayCount; ++i)
-			for(int j = 0; j < TriangleCount; ++j)
+		for(int i = 0; i < Base::RayCount; ++i)
+			for(int j = 0; j < Base::TriangleCount; ++j)
 			{
-				size_t index = i*TriangleCount + j; 
-				valid[index] &= (tFound[index] >= Scalar_T::Epsilon()) & (tFound[index] < t[i]);
+				size_t index = i*Base::TriangleCount + j; 
+				valid[index] &= (tFound[index] >= typename Base::Scalar_T::Epsilon()) & (tFound[index] < t[i]);
 
 				if(valid[index].mask())
 				{
 					t[i].ConditionalAssign(valid[index],tFound[index], t[i]);
 					t[i] = t[i].Min();
-					Scalar_T::Boolean resultMask = (t[i] == tFound[index]) & valid[index];
+					typename Base::Scalar_T::Boolean resultMask = (t[i] == tFound[index]) & valid[index];
 					ids[i] = triangles[j].user() & resultMask;
 					uv[i].x() = uvFound[index].x() & resultMask;
 					uv[i].y() = uvFound[index].y() & resultMask;
@@ -233,19 +203,19 @@ template<class _Options,class _Method> struct RayTriangleIntersection<_Options,_
 	{
 		// check for hit
 		
-		std::array<Scalar_T,ResultCount> tFound
-		std::array<Vector2_T,ResultCount> uvFound
-		std::array<Boolean,ResultCount> valid;
+		std::array<typename Base::Scalar_T,Base::ResultCount> tFound;
+		std::array<typename Base::Vector2_T,Base::ResultCount> uvFound;
+		std::array<typename Base::Boolean,Base::ResultCount> valid;
 
 		Base::operator()(rawRays,rawTriangles,tFound,uvFound,valid);
 		
-		ConstArrayWrapper<RawTArray,Scalar_T,RayCount> t(rawT);
-		ArrayWrapper<RawResultArray,BooleanMask,ResultCount> result(rawResult);
+		ConstArrayWrapper<RawTArray,typename Base::Scalar_T,Base::RayCount> t(rawT);
+		ArrayWrapper<RawResultArray,typename Base::BooleanMask,Base::ResultCount> result(rawResult);
 
-		for(int i = 0; i < ResultCount; ++i)
+		for(int i = 0; i < Base::ResultCount; ++i)
 		{
-			valid[i]  &= (tFound[i] < t[i/TriangleCount] );
-			valid[i]  &= (tFound[i] > Scalar_T::Epsilon());
+			valid[i]  &= (tFound[i] < t[i/Base::TriangleCount] );
+			valid[i]  &= (tFound[i] > typename Base::Scalar_T::Epsilon());
 			result[i] = valid[i].mask();
 		}
 	}
@@ -261,18 +231,18 @@ template<class _Options,class _Method> struct RayTriangleIntersection<_Options,_
 	{
 		// check for hit
 		
-		std::array<Scalar_T,ResultCount> tFound;
-		std::array<Vector2_T,ResultCount> uvFound;
-		std::array<Boolean,ResultCount> valid;
+		std::array<typename Base::Scalar_T,Base::ResultCount> tFound;
+		std::array<typename Base::Vector2_T,Base::ResultCount> uvFound;
+		std::array<typename Base::Boolean,Base::ResultCount> valid;
 
 		Base::operator()(rawRays,rawTriangles,tFound,uvFound,valid);
 		
-		ConstArrayWrapper<RawTArray,Scalar_T,RayCount> t(rawT);
+		ConstArrayWrapper<RawTArray,typename Base::Scalar_T,Base::RayCount> t(rawT);
 
-		for(int i = 0; i < ResultCount; ++i)
+		for(int i = 0; i < Base::ResultCount; ++i)
 		{
-			valid[i]  &= (tFound[i] < t[i/TriangleCount] );
-			valid[i]  &= (tFound[i] > Scalar_T::Epsilon());
+			valid[i]  &= (tFound[i] < t[i/Base::TriangleCount] );
+			valid[i]  &= (tFound[i] > typename Base::Scalar_T::Epsilon());
 			if(valid[i].mask())
 				return true;
 		}

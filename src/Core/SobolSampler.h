@@ -25,9 +25,9 @@
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_01.hpp>
 #include <boost/random/uniform_int_distribution.hpp>
-#include <iostream>
-#include <fstream>
+#include <strstream>
 
+extern const char* __data_sobolBasis[];
 
 namespace Raytrace {
 
@@ -37,7 +37,7 @@ template<class _SampleData,class _SceneReader> struct SobolSampler : public Samp
 	typedef _SceneReader SceneReader;
 
 	// dimensions after this will return random monte carlo numbers
-	const static size_t NumDimensions = 2048;
+	const static size_t NumDimensions = 512;
 	const static size_t MaxBits	= 16;
 	
 	const static size_t NumJitterValues = 1024;
@@ -56,7 +56,7 @@ template<class _SampleData,class _SceneReader> struct SobolSampler : public Samp
 	
 	void InitializePrepareST(size_t numThreads,const _SceneReader& scene,_SampleData& sampleData)
 	{
-		InitializeSampler(numThreads,scene,sampleData,2048);
+		InitializeSampler(numThreads,scene,sampleData,scene->getMultisampleCount());
 
 		LoadSobolMatrices();
 
@@ -130,7 +130,7 @@ template<class _SampleData,class _SceneReader> struct SobolSampler : public Samp
 				baseRandom ^= v;
 		
 
-		Real result =  frac( (double) baseRandom / (double) 0x100000000LL);
+		Real result =  frac( (Real)((double) baseRandom / (double) 0x100000000LL));
 
 		assert(result >= 0.0f && result < 1.0f);
 		return result;
@@ -153,7 +153,7 @@ template<class _SampleData,class _SceneReader> struct SobolSampler : public Samp
 
 	inline Real getRandomValue(size_t sampleIndex,size_t randomIndex)
 	{
-		size_t sequenceIndex = sampleIndex / _finalImage.size();
+		size_t sequenceIndex = (u32)(sampleIndex / _finalImage.size());
 		if(sequenceIndex == _sampleIdx)
 			sequenceIndex = _currentSequenceIdx;
 		else
@@ -162,15 +162,15 @@ template<class _SampleData,class _SceneReader> struct SobolSampler : public Samp
 			sequenceIndex = _lastSequenceIdx;
 		}
 		sampleIndex %= _finalImage.size();
-		size_t jitter1=_jitters[hash(sampleIndex)%NumJitterValues];
+		u32 jitter1=_jitters[hash((u32)sampleIndex)%NumJitterValues];
 		
-		size_t dimension_index = randomIndex;
+		u32 dimension_index = (u32)randomIndex;
 		
 		for(u32 v = 1<<31; jitter1; jitter1 >>= 1, v |= v>>1)
 			if(jitter1 & 1)
 				dimension_index ^= v;
 
-		size_t jitter2=_jitters[hash(sampleIndex+randomIndex)%NumJitterValues];
+		u32 jitter2=_jitters[hash( (u32)(sampleIndex+randomIndex))%NumJitterValues];
 
 		return mixup(_sequences[sequenceIndex]._X[ dimension_index %NumDimensions], jitter2 );
 	}
@@ -254,14 +254,6 @@ template<class _SampleData,class _SceneReader> struct SobolSampler : public Samp
 
 	inline void LoadSobolMatrices()
 	{
-		std::ifstream infile("new-joe-kuo-6.21201",std::ios::in);
-		if (!infile) 
-		{
-			assert(!"Input file containing direction numbers cannot be found!");
-			return;
-		}
-		char buffer[1000];
-		infile.getline(buffer,1000,'\n');
 
 		_sobolMatrices[0]._d = 0; //?
 		_sobolMatrices[0]._s = 0; //?
@@ -271,6 +263,7 @@ template<class _SampleData,class _SceneReader> struct SobolSampler : public Samp
 
 		for(int iD = 1; iD < NumDimensions; iD++)
 		{
+			std::istrstream infile(__data_sobolBasis[iD-1]);
 			infile >> _sobolMatrices[iD]._d >> _sobolMatrices[iD]._s >> _sobolMatrices[iD]._a;
 			size_t iB = 1;
 			//load basic dimensions

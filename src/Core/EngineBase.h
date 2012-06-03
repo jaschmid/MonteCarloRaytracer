@@ -56,20 +56,20 @@ public:
 	typedef _RayData RayData;
 	typedef _SceneReader SceneReader;
 
-	typedef IIntersector<RayData,SceneReader> IIntersector;
-	typedef ISampler<SampleData,SceneReader> ISampler;
-	typedef IIntegrator<SampleData,RayData,SceneReader> IIntegrator;
+	typedef IIntersector<RayData,SceneReader> IIntersectorType;
+	typedef ISampler<SampleData,SceneReader> ISamplerType;
+	typedef IIntegrator<SampleData,RayData,SceneReader> IIntegratorType;
 
-	typedef boost::shared_ptr<IIntersector> Intersector;
-	typedef boost::shared_ptr<ISampler> Sampler;
-	typedef boost::shared_ptr<IIntegrator> Integrator;
+	typedef boost::shared_ptr<IIntersectorType> IntersectorType;
+	typedef boost::shared_ptr<ISamplerType> SamplerType;
+	typedef boost::shared_ptr<IIntegratorType> IntegratorType;
 
 	typedef BasicRaytraceEngine<RayData,SampleData,SceneReader> ThisType;
 
 	BasicRaytraceEngine(
-		const Intersector& intersector,
-		const Sampler& sampler,
-		const Integrator& integrator,
+		const IntersectorType& intersector,
+		const SamplerType& sampler,
+		const IntegratorType& integrator,
 		const SceneReader& sceneReader) ;
 
 	~BasicRaytraceEngine();
@@ -137,9 +137,9 @@ private:
 	SampleData		_sampleData;
 	RayData			_rayData;
 
-	Sampler			_sampler;
-	Intersector		_intersector;
-	Integrator		_integrator;
+	SamplerType			_sampler;
+	IntersectorType		_intersector;
+	IntegratorType		_integrator;
 	SceneReader		_sceneReader;
 
 	float							_progress;

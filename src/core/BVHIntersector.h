@@ -67,11 +67,11 @@ template<class _RayData,class _SceneReader,int _SimdWidth,int _NodeArraySize,int
 
 	typedef mpl::vector< TriangleUserDataType<int>	> PrimitiveUserOptions;
 
-	typedef typename BaseRayType::adapt<RayOptions>::type		RayType;
+	typedef typename BaseRayType::template adapt<RayOptions>::type		RayType;
 
-	typedef typename BasePrimitiveType::adapt<PrimitiveUserOptions>::type UserPrimitiveType;
+	typedef typename BasePrimitiveType::template adapt<PrimitiveUserOptions>::type UserPrimitiveType;
 
-	typedef typename BasePrimitiveType::adapt<PrimitiveOptions>::type	PrimitiveType;
+	typedef typename BasePrimitiveType::template adapt<PrimitiveOptions>::type	PrimitiveType;
 	typedef AABBAccel<SimdWidth>	VolumeType;
 	
 	template<class _RayType> struct RayTypeInfo
@@ -277,7 +277,7 @@ template<class _RayData,class _SceneReader,int _SimdWidth,int _NodeArraySize,int
 	{
 	}
 	
-	template<class _RayType> inline void doIntersections(int threadId)
+	template<class _RayType> inline void doIntersections(size_t threadId)
 	{
 		typename RayData::Element<_RayType> element;
 		while(_rayData->popRay<_RayType>(threadId,element))
@@ -300,38 +300,40 @@ template<class _RayData,class _SceneReader,int _SimdWidth,int _NodeArraySize,int
 		RayTypeInfo<AnyHitRay>::type ray(rayArray);
 
 		Scalar_T tTemp(rayBase.length() > .0f ? rayBase.length() : std::numeric_limits<Real>::infinity());
-
-		stack.push_back(_sceneData->root());
-
-		while(!stack.empty())
+		if(_sceneData->root().valid())
 		{
-			BVHType::nodeIterator node = stack.back();
-			stack.pop_back();
+			stack.push_back(_sceneData->root());
 
-			if(node.isLeaf())
+			while(!stack.empty())
 			{
-				if(RayTypeInfo<AnyHitRay>::intersector_primitive()(ray, node.leaf(), tTemp))
+				BVHType::nodeIterator node = stack.back();
+				stack.pop_back();
+
+				if(node.isLeaf())
 				{
-					found = true;
-					break;
-				}
-			}
-			else
-			{
-				std::array< RayTypeInfo<AnyHitRay>::intersector_volume::BooleanMask ,NodeArraySize> resultMask;
-				
-				RayTypeInfo<AnyHitRay>::intersector_volume()(ray, node.volumes(), tTemp,resultMask);
-
-				for(size_t j = 0; j < NodeArraySize; ++j)
-					if(resultMask[j])
+					if(RayTypeInfo<AnyHitRay>::intersector_primitive()(ray, node.leaf(), tTemp))
 					{
-						for(size_t i = 0; i < SimdWidth; ++i)
-						{
-							//node.prefetchChild(j*SimdWidth+i);
-							stack.conditional_push_back( (resultMask[j] >> i) & 1, node.node(j*SimdWidth+i));
-						}
+						found = true;
+						break;
 					}
+				}
+				else
+				{
+					std::array< RayTypeInfo<AnyHitRay>::intersector_volume::BooleanMask ,NodeArraySize> resultMask;
+				
+					RayTypeInfo<AnyHitRay>::intersector_volume()(ray, node.volumes(), tTemp,resultMask);
 
+					for(size_t j = 0; j < NodeArraySize; ++j)
+						if(resultMask[j])
+						{
+							for(size_t i = 0; i < SimdWidth; ++i)
+							{
+								//node.prefetchChild(j*SimdWidth+i);
+								stack.conditional_push_back( (resultMask[j] >> i) & 1, node.node(j*SimdWidth+i));
+							}
+						}
+
+				}
 			}
 		}
 
@@ -357,41 +359,44 @@ template<class _RayData,class _SceneReader,int _SimdWidth,int _NodeArraySize,int
 		Vector2_T baryTemp;
 		Scalari_T triIds(0);
 		
-		stack.push(_sceneData->root(),0.0f);
-		while(!stack.empty())
+		if(_sceneData->root().valid())
 		{
-			BVHType::nodeIterator node = stack.getLowest();
-			if(node.isLeaf())
+			stack.push(_sceneData->root(),0.0f);
+			while(!stack.empty())
 			{
-				bool found = false;
+				BVHType::nodeIterator node = stack.getLowest();
+				if(node.isLeaf())
+				{
+					bool found = false;
 
-				if(RayTypeInfo<FirstHitRay>::intersector_primitive()(ray, node.leaf(), tTemp, baryTemp,triIds))
-					found = true;
+					if(RayTypeInfo<FirstHitRay>::intersector_primitive()(ray, node.leaf(), tTemp, baryTemp,triIds))
+						found = true;
 
-				if(found)
-					stack.compact(tTemp[0]);
-			}
-			else
-			{
+					if(found)
+						stack.compact(tTemp[0]);
+				}
+				else
+				{
 
-				std::array<Scalar_T,NodeArraySize> tTempArr;
-				std::array< RayTypeInfo<FirstHitRay>::intersector_volume::BooleanMask ,NodeArraySize> resultMask;
-				for(int i = 0; i < NodeArraySize; ++i)
-					tTempArr[i] = tTemp;
+					std::array<Scalar_T,NodeArraySize> tTempArr;
+					std::array< RayTypeInfo<FirstHitRay>::intersector_volume::BooleanMask ,NodeArraySize> resultMask;
+					for(int i = 0; i < NodeArraySize; ++i)
+						tTempArr[i] = tTemp;
 
 				
-				RayTypeInfo<FirstHitRay>::intersector_volume()(ray, node.volumes(), tTempArr, resultMask);
+					RayTypeInfo<FirstHitRay>::intersector_volume()(ray, node.volumes(), tTempArr, resultMask);
 				
-				for(size_t j = 0; j < NodeArraySize; ++j)
-					if(resultMask[j])
-					{
-						for(size_t i = 0; i < SimdWidth; ++i)
+					for(size_t j = 0; j < NodeArraySize; ++j)
+						if(resultMask[j])
 						{
-							//node.prefetchChild(j*SimdWidth+i);
-							stack.conditional_push( (resultMask[j] >> i) & 1, node.node(j*SimdWidth+i),tTempArr[j][i]);
+							for(size_t i = 0; i < SimdWidth; ++i)
+							{
+								//node.prefetchChild(j*SimdWidth+i);
+								stack.conditional_push( ((size_t)resultMask[j] >> i) & 1, node.node(j*SimdWidth+i),tTempArr[j][i]);
+							}
 						}
-					}
 
+				}
 			}
 		}
 		

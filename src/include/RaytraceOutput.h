@@ -20,6 +20,8 @@
 
 #include <RaytraceCommon.h>
 #include <RaytraceObject.h>
+#include <RaytraceCustomSceneReader.h>
+#include <boost/shared_ptr.hpp>
 
 namespace Raytrace {
 
@@ -30,6 +32,7 @@ namespace Raytrace {
 /******************************************/
 	
 	extern Output CreateOutput(const String& name = String());
+	extern Output CreateCustomOutput(const boost::shared_ptr<ISceneReader>& _sceneReader, const String& name = String());
 
 	class IOutput : public virtual IObject
 	{
@@ -38,6 +41,7 @@ namespace Raytrace {
 		{
 			FORMAT_R8G8B8A8,
 			FORMAT_A8R8G8B8,
+			FORMAT_RGBA_F32
 		};
 
 		//implicitly calls refresh

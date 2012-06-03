@@ -28,10 +28,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\core\AABB.h" />
+    <ClInclude Include="..\..\src\Core\AdaptiveSampler.h" />
     <ClInclude Include="..\..\src\Core\Aligned.h" />
     <ClInclude Include="..\..\src\Core\ArrayAdapter.h" />
     <ClInclude Include="..\..\src\Core\BackwardIntegrator.h" />
     <ClInclude Include="..\..\src\core\BaseImp.h" />
+    <ClInclude Include="..\..\src\Core\BidirectionalIntegrator.h" />
     <ClInclude Include="..\..\src\core\BVH.h" />
     <ClInclude Include="..\..\src\Core\BVHConstructor.h" />
     <ClInclude Include="..\..\src\core\BVHIntersector.h" />
@@ -43,10 +45,12 @@
     <ClInclude Include="..\..\src\Core\IEngine.h" />
     <ClInclude Include="..\..\src\Core\IIntersector.h" />
     <ClInclude Include="..\..\src\core\ImageWriter.h" />
+    <ClInclude Include="..\..\src\Core\ImportanceSamplers.h" />
     <ClInclude Include="..\..\src\Core\IntegratorBase.h" />
     <ClInclude Include="..\..\src\Core\IntersectorBase.h" />
     <ClInclude Include="..\..\src\Core\ISampler.h" />
     <ClInclude Include="..\..\src\Core\IIntegrator.h" />
+    <ClInclude Include="..\..\src\Core\PhongMaterial.h" />
     <ClInclude Include="..\..\src\Core\SobolSampler.h" />
     <ClInclude Include="..\..\src\core\MaterialImp.h" />
     <ClInclude Include="..\..\src\core\MathHelper.h" />
@@ -87,6 +91,8 @@
     <ClInclude Include="..\..\src\include\Math\VectorBase.h" />
     <ClInclude Include="..\..\src\include\preproc.h" />
     <ClInclude Include="..\..\src\include\RaytraceCamera.h" />
+    <ClInclude Include="..\..\src\include\RaytraceCustomSceneReader.h" />
+    <ClInclude Include="..\..\src\include\RaytraceLexicalCast.h" />
     <ClInclude Include="..\..\src\include\RaytraceMaterial.h" />
     <ClInclude Include="..\..\src\include\RaytraceOutput.h" />
     <ClInclude Include="..\..\src\include\RaytraceCommon.h" />
@@ -129,6 +135,14 @@
     <ClCompile Include="..\..\src\core\ResultDefinitions.cpp" />
     <ClCompile Include="..\..\src\core\SceneImp.cpp" />
     <ClCompile Include="..\..\src\Core\SimpleIntersector.cpp" />
+    <ClCompile Include="..\..\src\Core\SobolBasis.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='ReleaseIntel|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='ReleaseIntel|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="..\..\src\Core\SobolSampler.cpp" />
     <ClCompile Include="..\..\src\core\TriMeshImp.cpp" />
     <ClCompile Include="..\..\src\Core\WhittedIntegrator.cpp" />
@@ -290,7 +304,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>EIGEN_DONT_ALIGN;NOMINMAX;WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>TIXML_USE_STL;EIGEN_DONT_ALIGN;NOMINMAX;WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>headers.h</PrecompiledHeaderFile>
       <StructMemberAlignment>Default</StructMemberAlignment>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -307,7 +321,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>EIGEN_DONT_ALIGN;NOMINMAX;_WIN64;TIXML_USE_STL;WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>TIXML_USE_STL;EIGEN_DONT_ALIGN;NOMINMAX;_WIN64;TIXML_USE_STL;WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>headers.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
@@ -322,7 +336,7 @@
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>EIGEN_DONT_ALIGN;NOMINMAX;WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>TIXML_USE_STL;EIGEN_DONT_ALIGN;NOMINMAX;WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>headers.h</PrecompiledHeaderFile>
       <FloatingPointModel>Fast</FloatingPointModel>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
@@ -346,7 +360,7 @@
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>EIGEN_DONT_ALIGN;NOMINMAX;_WIN64;TIXML_USE_STL;WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>TIXML_USE_STL;EIGEN_DONT_ALIGN;NOMINMAX;_WIN64;TIXML_USE_STL;WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>headers.h</PrecompiledHeaderFile>
       <FloatingPointModel>Fast</FloatingPointModel>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
@@ -369,7 +383,7 @@
       <Optimization>MaxSpeedHighLevel</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>EIGEN_DONT_ALIGN;NOMINMAX;WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>TIXML_USE_STL;EIGEN_DONT_ALIGN;NOMINMAX;WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>headers.h</PrecompiledHeaderFile>
       <FloatingPointModel>Precise</FloatingPointModel>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions3</EnableEnhancedInstructionSet>
@@ -405,7 +419,7 @@
       <Optimization>MaxSpeedHighLevel</Optimization>
       <FunctionLevelLinking>false</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>EIGEN_DONT_ALIGN;NOMINMAX;_WIN64;TIXML_USE_STL;WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>TIXML_USE_STL;EIGEN_DONT_ALIGN;NOMINMAX;_WIN64;TIXML_USE_STL;WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>headers.h</PrecompiledHeaderFile>
       <FloatingPointModel>Fast2</FloatingPointModel>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions3</EnableEnhancedInstructionSet>

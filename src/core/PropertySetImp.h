@@ -18,6 +18,7 @@
 #ifndef RAYTRACE_PROPERTY_SET_IMP_GUARD
 #define RAYTRACE_PROPERTY_SET_IMP_GUARD
 
+#include <RaytraceLexicalCast.h>
 #include <RaytracePropertySet.h>
 #include <boost/lexical_cast.hpp>
 #include <boost/intrusive/set.hpp>
@@ -30,71 +31,6 @@
 #include "BaseImp.h"
 
 namespace Raytrace {
-
-	template<class _Output,class _Input> inline bool LexicalCast(const _Input& input,_Output& output)
-	{
-		output = boost::lexical_cast<_Output,_Input>(input);
-		return true;
-	}
-	
-	template<> inline bool LexicalCast<bool,String>(const String& input,bool& output)
-	{
-		if(boost::iequals(input,"true"))
-			output = true;
-		else if(boost::iequals(input,"false"))
-			output = false;
-		else
-			return false;
-		return true;
-	}
-	
-	template<> inline bool LexicalCast<String,bool>(const bool& input,String& output)
-	{
-		if(input)
-			output = String("true");
-		else
-			output = String("false");
-		return true;
-	}
-
-	template<> inline bool LexicalCast<String,Vector3>(const Vector3& input,String& output)
-	{
-		output = boost::lexical_cast<String>(input.x()) + " " + boost::lexical_cast<String>(input.y()) + " " + boost::lexical_cast<String>(input.z());
-		return true;
-	}
-	
-	template<> inline bool LexicalCast<Vector3,String>(const String& input,Vector3& output)
-	{
-		std::vector<String> elements;
-		String trimmed = boost::algorithm::trim_copy(input);
-		boost::algorithm::split(elements,trimmed,boost::algorithm::is_space(),boost::algorithm::token_compress_on);
-		if(elements.size() != 3)
-			return false;
-		output.x() = boost::lexical_cast<Real,String>(elements[0]);
-		output.y() = boost::lexical_cast<Real,String>(elements[1]);
-		output.z() = boost::lexical_cast<Real,String>(elements[2]);
-		return true;
-	}
-	
-	template<> inline bool LexicalCast<String,Vector4>(const Vector4& input,String& output)
-	{
-		output = boost::lexical_cast<String>(input.x()) + " " + boost::lexical_cast<String>(input.y()) + " " + boost::lexical_cast<String>(input.z()) + " " + boost::lexical_cast<String>(input.w());
-		return true;
-	}
-	
-	template<> inline bool LexicalCast<Vector4,String>(const String& input,Vector4& output)
-	{
-		std::vector<String> elements;
-		String trimmed = boost::algorithm::trim_copy(input);
-		boost::algorithm::split(elements,trimmed,boost::algorithm::is_space(),boost::algorithm::token_compress_on);
-		if(elements.size() != 4)
-			return false;
-		output.x() = boost::lexical_cast<Real,String>(elements[0]);
-		output.y() = boost::lexical_cast<Real,String>(elements[1]);
-		output.z() = boost::lexical_cast<Real,String>(elements[2]);
-		output.w() = boost::lexical_cast<Real,String>(elements[3]);
-		return true;
-	}
 
 	template<class _Final,class _Base> class PropertySetImp : public BaseImp<_Final,_Base>
 	{
@@ -170,6 +106,11 @@ namespace Raytrace {
 
 			template<class _Type> Property(_Type (_Final::*getter)() const,void (_Final::*setter)(const _Type&)) : 
 				_toCast(getter?new CastToStringImp<_Type>(getter):nullptr),_fromCast(setter?new CastFromStringImp<_Type>(setter):nullptr)
+			{
+			}
+				
+			template<class _Type> Property(_Type (_Final::*getter)() const) : 
+				_toCast(getter?new CastToStringImp<_Type>(getter):nullptr),_fromCast(nullptr)
 			{
 			}
 

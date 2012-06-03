@@ -575,6 +575,8 @@ namespace Raytrace {
 		}
 
 		/*public functions*/
+		
+		/*
 		template<IMAGE_FORMAT _format2> void CopyFrom(const ImageRect<_format2>& source)
 		{
 			assert(source.XSize() == XSize());
@@ -613,7 +615,7 @@ namespace Raytrace {
 			for(u32 y = 0; y < _size.y(); ++y)
 				for(u32 x = 0; x < _size.x(); ++x)
 					getPixel(x,y) = source.getPixel(x,y);
-		}
+		}*/
 
 		PixelType& operator()(u32 x,u32 y) {assert(x<_size.x()); assert(y<_size.y()); return getPixel(x,y);}
 		const PixelType& operator()(u32 x,u32 y) const {assert(x<_size.x()); assert(y<_size.y()); return getPixel(x,y);}
@@ -663,13 +665,14 @@ namespace Raytrace {
 		EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 	};
 
+
 	template<class _PixelType> class UncompressedImageData
 	{
 	public:
 
 		typedef _PixelType PixelType;
 
-		/*public constructors*/
+		//public constructors
 
 		UncompressedImageData(u32 xSize,u32 ySize) : _xSize(xSize),_ySize(ySize),_Data(_xSize*_ySize) {}
 		UncompressedImageData(u32 xSize,u32 ySize,const _PixelType* pData) : _xSize(xSize),_ySize(ySize),_Data(_xSize*_ySize) { memcpy(_Data.data(),pData,_Data.size()*sizeof(_PixelType));}
@@ -684,7 +687,7 @@ namespace Raytrace {
 			_Data = source.getData();
 		}
 
-		/*public functions*/
+		//public functions
 
 		UncompressedImageData<_PixelType>& operator = (const UncompressedImageData<_PixelType>& other)
 		{
@@ -701,10 +704,10 @@ namespace Raytrace {
 		
 		ImageRect<_PixelType::Format> GetRect(const Vector4u& rect)
 		{
-			assert(rect.x < rect.z);
-			assert(rect.y < rect.w);
-			assert(rect.z <= XSize());
-			assert(rect.w <= YSize());
+			assert(rect.x() < rect.z());
+			assert(rect.y() < rect.w());
+			assert(rect.z() <= XSize());
+			assert(rect.w() <= YSize());
 			return ImageRect<_PixelType::Format>(_Data.data(),rect,XSize());
 		}
 
@@ -715,10 +718,10 @@ namespace Raytrace {
 
 		ImageRect<_PixelType::Format> GetRect(const Vector4u& rect) const
 		{
-			assert(rect.x < rect.z);
-			assert(rect.y < rect.w);
-			assert(rect.z <= XSize());
-			assert(rect.w <= YSize());
+			assert(rect.x() < rect.z());
+			assert(rect.y() < rect.w());
+			assert(rect.z() <= XSize());
+			assert(rect.w() <= YSize());
 			return ConstImageRect<_PixelType::Format>(_Data.data(),rect,XSize());
 		}
 
@@ -731,9 +734,10 @@ namespace Raytrace {
 		const u32 GetDataSize() const{return (u32)(sizeof(_PixelType)*_Data.size());}
 	private:
 
-		/*private functions*/
+		//private functions
 
-		template<class _destType> typename UncompressedImageData<_destType> convertTo() const
+		
+		template<class _destType> UncompressedImageData<_destType> convertTo() const
 		{
 			UncompressedImageData<_destType> result(_xSize,_ySize);
 			for(int iy = 0; iy < _ySize; ++iy)
@@ -759,11 +763,11 @@ namespace Raytrace {
 	{
 	public:
 
-		/*public types*/
+		//public types
 
 		typedef _BlockType BlockBase;
 		
-		/*public constructors*/
+		//public constructors
 
 		BlockCompressedImageData(u32 xSize,u32 ySize,const void* pData) : _xSize(xSize),_ySize(ySize),_xBlocks(xSize / BlockBase::BlockWidth)
 		{ 
@@ -772,7 +776,7 @@ namespace Raytrace {
 			memcpy(_Data.data(),pData,nBlocks*sizeof(BlockBase));
 		}
 
-		/*public functions*/
+		//public functions
 
 		// Pixel<_format>& operator()(u32 x,u32 y) {return _Data[y*_xSize+x];} can't write directly
 		typename _BlockType::PixelType operator()(u32 x,u32 y) const 
@@ -790,7 +794,7 @@ namespace Raytrace {
 
 	private:
 
-		/*private functions*/
+		//private functions
 
 		template<class _destType> UncompressedImageData<_destType> convertTo() const
 		{
@@ -815,16 +819,19 @@ namespace Raytrace {
 		template<IMAGE_FORMAT _FriendFormat> friend class ImageData;
 	};
 	
-	template<IMAGE_FORMAT _format> class ImageData : public UncompressedImageData<typename Pixel<_format>>
+	template<IMAGE_FORMAT _format> class ImageData : public UncompressedImageData<Pixel<_format>>
 	{
 	public:
 
 		/*public constructors*/
 
-		ImageData(u32 xSize,u32 ySize) : UncompressedImageData<typename Pixel<_format>>(xSize,ySize) {}
-		ImageData(u32 xSize,u32 ySize,const Pixel<_format>* pData) : UncompressedImageData<typename Pixel<_format>>(xSize,ySize,pData) {}
+		ImageData(u32 xSize,u32 ySize) : UncompressedImageData<Pixel<_format>>(xSize,ySize) {}
+		ImageData(u32 xSize,u32 ySize,const Pixel<_format>* pData) : UncompressedImageData<Pixel<_format>>(xSize,ySize,pData) {}
 
-		template<IMAGE_FORMAT _srcFormat> ImageData(const ImageData<_srcFormat>& source)  : UncompressedImageData<typename Pixel<_format>>( (UncompressedImageData<Pixel<_format>>) source.convertTo<Pixel<_format>>() )
+		typedef Pixel<_format> PixelType;
+		typedef  UncompressedImageData<PixelType > Base;
+
+		template<IMAGE_FORMAT _srcFormat> ImageData(const ImageData<_srcFormat>& source)  : Base( source )
 		{
 		}
 

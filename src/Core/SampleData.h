@@ -97,7 +97,7 @@ public:
 	inline bool popCompletedSample(size_t threadId,SampleOutput& completed)
 	{
 		_completedSamples.advanceElement(threadId);
-		CompletedSample* p_completed = _completedSamples.currElement(threadId);
+		SampleOutput* p_completed = _completedSamples.currElement(threadId);
 		if(p_completed)
 		{
 			completed = *p_completed;
@@ -115,7 +115,7 @@ public:
 	inline bool popGeneratedSample(size_t threadId,SampleInput& generated)
 	{
 		_generatedSamples.advanceElement(threadId);
-		GeneratedSample* p_generated = _generatedSamples.currElement(threadId);
+		SampleInput* p_generated = _generatedSamples.currElement(threadId);
 		if(p_generated)
 		{
 			generated = *p_generated;

@@ -80,7 +80,7 @@ static float FastPoissonDiskSampling(const float r, std::vector<Vector2>& PointL
         for( size_t i=0; i<K; ++i )
         {
             // Generate point in radius (R,2R)
-            float t = URand()*M_PI*2.0;
+            float t = URand()*R_PI*2.0;
             float r = URand()*R+R;
             float X = r*cosf( t );
             float Y = r*sinf( t );

@@ -61,6 +61,9 @@
     <Filter Include="Header Files\Core\Engines">
       <UniqueIdentifier>{5cdeb996-29ab-4ab6-a493-97eaba8ac89e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Core\Materials">
+      <UniqueIdentifier>{f518f431-44f9-4bd6-9414-e2ea9f4bbce1}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\core\headers.h">
@@ -276,6 +279,24 @@
     <ClInclude Include="..\..\src\Core\SobolSampler.h">
       <Filter>Header Files\Core\Samplers</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\Core\BidirectionalIntegrator.h">
+      <Filter>Header Files\Core\SurfaceIntegrators</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Core\AdaptiveSampler.h">
+      <Filter>Header Files\Core\Samplers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Core\PhongMaterial.h">
+      <Filter>Header Files\Core\Materials</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Core\ImportanceSamplers.h">
+      <Filter>Header Files\Core\Materials</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\RaytraceCustomSceneReader.h">
+      <Filter>Shared Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\include\RaytraceLexicalCast.h">
+      <Filter>Shared Headers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\core\ResultDefinitions.cpp">
@@ -339,6 +360,9 @@
       <Filter>Source Files\Engine\Integrators</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\Core\SobolSampler.cpp">
+      <Filter>Source Files\Engine\Samplers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Core\SobolBasis.cpp">
       <Filter>Source Files\Engine\Samplers</Filter>
     </ClCompile>
   </ItemGroup>

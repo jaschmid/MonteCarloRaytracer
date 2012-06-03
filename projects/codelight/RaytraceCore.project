@@ -13,10 +13,8 @@
     <File Name="../../src/Core/TriMeshImp.cpp"/>
     <File Name="../../src/Core/BVHIntersector.cpp"/>
     <File Name="../../src/Core/CameraImp.cpp"/>
-    <File Name="../../src/Core/DummyEngine.cpp"/>
     <File Name="../../src/Core/EngineBase.cpp"/>
     <File Name="../../src/Core/Engines.cpp"/>
-    <File Name="../../src/Core/FastEngine.cpp"/>
     <File Name="../../src/Core/headers.cpp"/>
     <File Name="../../src/Core/ImageWriter.cpp"/>
     <File Name="../../src/Core/MaterialImp.cpp"/>
@@ -35,7 +33,6 @@
       <File Name="../../src/Core/BVH.h"/>
       <File Name="../../src/Core/BVHConstructor.h"/>
       <File Name="../../src/Core/BVHIntersector.h"/>
-      <File Name="../../src/Core/DummyEngine.h"/>
       <File Name="../../src/Core/EngineBase.h"/>
       <File Name="../../src/Core/Engines.h"/>
       <File Name="../../src/Core/IEngine.h"/>
@@ -122,7 +119,8 @@
       <ResourceCompiler Options="" Required="no"/>
       <General OutputFile="$(IntermediateDirectory)/$(ProjectName).so" IntermediateDirectory="./Debug" Command="" CommandArguments="" UseSeparateDebugArgs="no" DebugArguments="" WorkingDirectory="$(IntermediateDirectory)" PauseExecWhenProcTerminates="yes"/>
       <Environment EnvVarSetName="&lt;Use Defaults&gt;" DbgSetName="&lt;Use Defaults&gt;">
-        <![CDATA[]]>
+        <![CDATA[
+      ]]>
       </Environment>
       <Debugger IsRemote="no" RemoteHostName="" RemoteHostPort="" DebuggerPath="">
         <PostConnectCommands/>
@@ -161,7 +159,8 @@
       <ResourceCompiler Options="" Required="no"/>
       <General OutputFile="$(IntermediateDirectory)/$(ProjectName).so" IntermediateDirectory="./Release" Command="" CommandArguments="" UseSeparateDebugArgs="no" DebugArguments="" WorkingDirectory="$(IntermediateDirectory)" PauseExecWhenProcTerminates="yes"/>
       <Environment EnvVarSetName="&lt;Use Defaults&gt;" DbgSetName="&lt;Use Defaults&gt;">
-        <![CDATA[]]>
+        <![CDATA[
+      ]]>
       </Environment>
       <Debugger IsRemote="no" RemoteHostName="" RemoteHostPort="" DebuggerPath="">
         <PostConnectCommands/>

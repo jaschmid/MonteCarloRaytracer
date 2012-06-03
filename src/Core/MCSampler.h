@@ -58,6 +58,8 @@ template<class _SampleData,class _SceneReader> struct MCSampler : public Sampler
 {
 	typedef _SampleData SampleData;
 	typedef _SceneReader SceneReader;
+	
+	typedef SamplerBase<_SampleData,_SceneReader> Base;
 	//typedef MultisampleGenerator SamplerType;
 
 	inline MCSampler()
@@ -72,9 +74,9 @@ template<class _SampleData,class _SceneReader> struct MCSampler : public Sampler
 	{
 		//_sampler.Initialize(1.0f/32.0f);
 
-		InitializeSampler(numThreads,scene,sampleData,2048);
+		InitializeSampler(numThreads,scene,sampleData,scene->getMultisampleCount());
 
-		_sampleData->setSampleGenerator(this);
+		Base::_sampleData->setSampleGenerator(this);
 				
 		_threadData.resize(numThreads);
 	}
@@ -83,12 +85,12 @@ template<class _SampleData,class _SceneReader> struct MCSampler : public Sampler
 	{
 		if(random_index == SampleData::SampleIndex2DImageXY)
 		{
-			size_t multisampleIndex = (size_t)(sample._index  / (up)_finalImage.size());
-			size_t imageIndex = (size_t)(sample._index  % (up)_finalImage.size());
+			size_t multisampleIndex = (size_t)(sample._index  / (up)Base::_finalImage.size());
+			size_t imageIndex = (size_t)(sample._index  % (up)Base::_finalImage.size());
 			//SampleIdType sampleIndex = (SampleIdType)(i - _numCompletedSamples);
 				
-			Vector2i currentPixel((u32)(imageIndex % _imageSize.x()), (u32)(imageIndex / _imageSize.x()));
-			Vector2 current ( (float)(currentPixel.x()) * (float)_pixelSize.x(), (float)(currentPixel.y()) * (float)_pixelSize.y());
+			Vector2i currentPixel((u32)(imageIndex % Base::_imageSize.x()), (u32)(imageIndex / Base::_imageSize.x()));
+			Vector2 current ( (float)(currentPixel.x()) * (float)Base::_pixelSize.x(), (float)(currentPixel.y()) * (float)Base::_pixelSize.y());
 			current+=_pixelSize*.5f;
 			
 			Vector2 jitter = Vector2(	_threadData[threadId]._randomUniformDistribution(_threadData[threadId]._randomGenerator),

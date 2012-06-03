@@ -38,6 +38,30 @@ namespace mpl = boost::mpl;
 
 typedef boost::mpl::vector< AnyHitRay , FirstHitRay >::type RayClassifications;
 
+namespace detail
+{
+
+
+	template<class _RayClassification,class RayData> struct RayDataElement;
+	
+	template<class RayData> struct RayDataElement<FirstHitRay,RayData>
+	{
+		typename RayData::RayType ray;
+		typename RayData::AbsoluteIntersectionLocation* absoluteIntersectionLocation;
+		typename RayData::RayRelativeIntersection* rayRelativeIntersectionLocation;
+		typename RayData::PrimitiveRelativeIntersection* primitiveRelativeIntersectionLocation;
+		typename RayData::PrimitiveUserData* primitiveIdentifier;
+	};
+
+	template<class RayData> struct RayDataElement<AnyHitRay,RayData>
+	{
+		typename RayData::RayType ray;
+		up* resultOut;
+		up	 resultIndex;
+	};
+
+}
+
 template<class _RayType,class _PrimitiveType,int _RaysPerBlock> struct SimpleRayData
 {
 	
@@ -55,7 +79,8 @@ public:
 	typedef typename _PrimitiveType::RelativeLocation	PrimitiveRelativeIntersection;
 	typedef typename _PrimitiveType::UserData			PrimitiveUserData;
 	typedef Eigen::Matrix<Scalar,Dimensions,1>			AbsoluteIntersectionLocation;
-	
+
+	typedef SimpleRayData<RayType,PrimitiveType,RaysPerBlock> ThisType;
 
 	static_assert(_RayType::Dimensions == _PrimitiveType::Dimensions, "Ray type and Primitive type must have the same amount of dimensions!");
 	static_assert(std::is_same<typename _RayType::Scalar_T,typename _PrimitiveType::Scalar_T>::value, "Ray and primitive must have same scalar type!");
@@ -109,7 +134,7 @@ public:
 		fusion::at_key<FirstHitRay>(_data).pushElement(element,threadId);
 	}
 	
-	inline void pushRay(size_t threadId,const RayType& ray,u32* pResultOut,u32 resultIndex = 0)
+	inline void pushRay(size_t threadId,const RayType& ray,up* pResultOut,u32 resultIndex = 0)
 	{
 		Element<AnyHitRay> element;
 		element.ray = ray;
@@ -134,23 +159,11 @@ public:
 	{
 		return fusion::at_key<AnyHitRay>(_data).size();
 	}
-
-	template<class _RayClassification> struct Element
+	template<class _RayClassification> struct Element : public detail::RayDataElement<_RayClassification,ThisType>
 	{
-		RayType ray;
-		AbsoluteIntersectionLocation* absoluteIntersectionLocation;
-		RayRelativeIntersection* rayRelativeIntersectionLocation;
-		PrimitiveRelativeIntersection* primitiveRelativeIntersectionLocation;
-		PrimitiveUserData* primitiveIdentifier;
+		
 	};
-
-	template<> struct Element<AnyHitRay>
-	{
-		RayType ray;
-		up* resultOut;
-		up	 resultIndex;
-	};
-
+	
 	typedef SplitUseWorkQueue<Element<AnyHitRay>,RaysPerBlock> AnyRayData;
 	typedef SplitUseWorkQueue<Element<FirstHitRay>,RaysPerBlock> FirstRayData;
 
