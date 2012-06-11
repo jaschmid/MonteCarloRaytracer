@@ -30,6 +30,7 @@
 #include <maya/MPxCommand.h>
 #include <maya/MSyntax.h>
 #include <maya/MObject.h>
+#include <boost/thread.hpp>
 #include <vector>
 #include <deque>
 
@@ -63,8 +64,21 @@ public:
 
 private:
 
+	struct ThreadLauncher
+	{
+		inline void operator()()
+		{
+			_renderView->threadEnter();
+		}
+		MayaRenderView* _renderView;
+	};
+
+	MStatus threadEnter();
+
+	friend struct ThreadLauncher;
 	void reloadScene();
 
+	boost::thread			_renderingThread;
 	Raytrace::Vector2u		_resolution;
 	std::string				_camera;
 };

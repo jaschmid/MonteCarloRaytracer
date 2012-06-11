@@ -140,6 +140,8 @@ namespace Raytrace {
 			pMaterialOut->_translucency =		_materials[i]->GetTranslucency();
 			pMaterialOut->_transmit_filter =	_materials[i]->GetTransmitFilter();
 			pMaterialOut->_transparency =		_materials[i]->GetTransparency();
+			pMaterialOut->_specular_power =		200.0f;
+			pMaterialOut->_translucency_power =		200.0f;
 			pMaterialOut->_mirror_color =		_materials[i]->GetMirrorColor().head<3>();
 			
 		}
@@ -172,6 +174,11 @@ namespace Raytrace {
 		void 			GetBackgroundRadianceData(void* pData) const
 		{
 			(*(Vector4*)pData) = Vector4(10.0f,10.0f,10.0f,0.0f);
+		}
+
+		Matrix4			GetViewMatrix() const
+		{
+			return _viewMatrix;
 		}
 
 	private:
@@ -328,6 +335,11 @@ namespace Raytrace {
 		{
 			assert( _sceneReader->GetBackgroundRadianceFormat() == ISceneReader::BACKGROUND_FORMAT_RGBA_F32);
 			_sceneReader->GetBackgroundRadianceData(pDataOut);
+		}
+
+		inline Matrix4 getViewMatrix() const
+		{
+			return _sceneReader->GetViewMatrix();
 		}
 
 		inline Vector2u getResolution() const

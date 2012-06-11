@@ -323,6 +323,8 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>TIXML_USE_STL;EIGEN_DONT_ALIGN;NOMINMAX;_WIN64;TIXML_USE_STL;WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>headers.h</PrecompiledHeaderFile>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

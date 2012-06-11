@@ -30,6 +30,7 @@
 #include <maya/MSyntax.h>
 #include <maya/MObject.h>
 #include <maya/MFnMesh.h>
+#include <maya/MFnLambertShader.h>
 #include <maya/MItDag.h>
 #include <maya/MDagPath.h>
 #include <maya/MDagPathArray.h>
@@ -74,6 +75,8 @@ public:
 	Raytrace::Vector2u	GetBackgroundRadianceSize() const;
 	Format				GetBackgroundRadianceFormat() const;
 	void 				GetBackgroundRadianceData(void* pData) const;
+
+	Raytrace::Matrix4				GetViewMatrix() const;
 private:
 
 	Raytrace::Vector2u GetResolution() const ;
@@ -83,11 +86,20 @@ private:
 	Raytrace::String GetPrimitiveType() const ;
 
 	void parseTriMesh(const MObject& triMesh);
-	/*
-	void parseMaterial(const MFnMaterial& material)
+	int parseMaterial(const MObject& material);
+
+	struct MaterialContainer
 	{
-		_materials.push_back(material);
-	}*/
+		MObject									_materialObject;
+		ISceneReader::MaterialData				_materialData;
+		bool operator == (const MaterialContainer& m2) const
+		{
+			if(_materialObject == m2._materialObject)
+				return true;
+			else
+				return false;
+		}
+	};
 		
 	struct MeshContainer
 	{
@@ -99,6 +111,9 @@ private:
 
 		MIntArray								_triangleCounts;
 		MIntArray								_triangleVertices;
+
+		std::vector<std::vector<int>>			_faceMaterialIndices;
+		std::vector<int>						_materialIndices;
 
 		bool operator ==(const MeshContainer& m2) const
 		{
@@ -113,7 +128,7 @@ private:
 
 	Raytrace::Matrix4							_viewMatrix;
 	IntervalMap									_primitives;
-	std::vector<MaterialData>					_materials;
+	std::vector<MaterialContainer>				_materials;
 	MDagPath									_camera;
 
 	Raytrace::Vector2u							_envSize;

@@ -3,8 +3,11 @@
 #include <maya/MMatrix.h>
 #include <maya/MDagPath.h>
 #include <maya/MDagPathArray.h>
+#include <maya/MPlugArray.h>
 #include <maya/MFnCamera.h>
 #include <maya/MFnDependencyNode.h>
+#include <maya/MFnLambertShader.h>
+#include <maya/MFnPhongShader.h>
 #include "MayaGlobals.h"
 
 inline void getCustomAttribute(MString &strAttribute, MString attribute, MFnDependencyNode &node)
@@ -22,6 +25,7 @@ inline void getCustomAttribute(MString &strAttribute, MString attribute, MFnDepe
 
 MayaSceneReader::MayaSceneReader() : _resolution(640,480)
 {
+
 	//scan the scene
 	MItDag it(MItDag::kDepthFirst,MFn::kMesh);
 
@@ -89,7 +93,7 @@ MayaSceneReader::MayaSceneReader() : _resolution(640,480)
 					float py = (float)y / (float)(_envSize.y()-1);
 					float px = (float)x / (float)(_envSize.x()-1);
 					float f = cosf(py*M_PI/2.0f);
-					_envData[y * _envSize.x() + x] = Raytrace::Vector4(1.0f,1.0f,1.0f,1.0f)*f*f;
+					_envData[y * _envSize.x() + x] = Raytrace::Vector4(1.0f,1.0f,1.0f,1.0f);
 				}
 		}
 	}
@@ -167,25 +171,119 @@ void				MayaSceneReader::GetPrimitive(size_t i,void* pPrimitiveOut) const
 	pOut->_p2 = b.head<3>();
 	pOut->_p3 = a.head<3>();
 			
-	pOut->_material = 0;
+	if(meshCont._materialIndices[instance] >=0)
+		pOut->_material = meshCont._materialIndices[instance];
+	else
+	{
+		pOut->_material =  
+			meshCont._faceMaterialIndices[instance][primivite];
+	}
 
 	return;
 }
 
+
+int MayaSceneReader::parseMaterial(const MObject& shadingEngine)
+{
+	MaterialContainer c;
+	c._materialObject= shadingEngine;
+
+	
+	// attach a function set to the shading engine
+	MFnDependencyNode fn( shadingEngine );
+
+	// get access to the surfaceShader attribute. This will be connected to
+	// lambert , phong nodes etc.
+	MPlug sshader = fn.findPlug("surfaceShader");
+
+	// will hold the connections to the surfaceShader attribute
+	MPlugArray materials;
+
+	// get the material connected to the surface shader
+	sshader.connectedTo(materials,true,false);
+
+	
+	c._materialData._color = Raytrace::Vector3(0.0f,0.0f,0.0f);
+	c._materialData._mirror_color = Raytrace::Vector3(1.0f,1.0f,1.0f);
+	c._materialData._diffuseReflect = 0.0f;
+	c._materialData._specular_reflect = 0.0f;
+	c._materialData._emit = 0.0f;
+	c._materialData._ior = 1.0f;
+	c._materialData._transparency = 0.0f;
+	c._materialData._transmit_filter = 0.0f;
+	c._materialData._translucency_power = 200.0f;
+	c._materialData._specular_power = 200.0f;
+
+	// if we found a material
+	if(materials.length() > 0)
+	{
+
+		switch(materials[0].node().apiType())
+		{
+		case MFn::kPhong:
+		case MFn::kPhongMaterial:
+			{
+				// attach the function set to the object
+				MFnPhongShader fn(materials[0].node());
+				c._materialData._color = Raytrace::Vector3( fn.color().r,fn.color().g,fn.color().b);
+				c._materialData._mirror_color = Raytrace::Vector3(fn.specularColor().r,fn.specularColor().g,fn.specularColor().b);
+				c._materialData._diffuseReflect = fn.diffuseCoeff();
+				c._materialData._specular_reflect = fn.reflectivity();
+				c._materialData._emit = (fn.incandescence().r + fn.incandescence().g + fn.incandescence().b) / 3.0f;
+				c._materialData._ior = fn.refractiveIndex();
+				c._materialData._transparency = fn.translucenceCoeff();
+				c._materialData._transmit_filter = Raytrace::Vector3( fn.transparency().r, fn.transparency().g, fn.transparency().b ).sum()/3.0f;
+				c._materialData._translucency_power = 200.0f;
+				c._materialData._specular_power = fn.cosPower();
+			}
+			break;
+		case MFn::kLambert:
+		case MFn::kLambertMaterial:
+			{
+				// attach the function set to the object
+				MFnLambertShader fn(materials[0].node());
+				c._materialData._color = Raytrace::Vector3( fn.color().r,fn.color().g,fn.color().b);
+				c._materialData._mirror_color = Raytrace::Vector3(1.0f,1.0f,1.0f);
+				c._materialData._diffuseReflect = fn.diffuseCoeff();
+				c._materialData._specular_reflect = 0.0f;
+				c._materialData._emit = (fn.incandescence().r + fn.incandescence().g + fn.incandescence().b) / 3.0f;
+				c._materialData._ior = fn.refractiveIndex();
+				c._materialData._transparency = fn.translucenceCoeff();
+				c._materialData._transmit_filter = Raytrace::Vector3( fn.transparency().r, fn.transparency().g, fn.transparency().b ).sum()/3.0f;
+				c._materialData._translucency_power = 200.0f;
+				c._materialData._specular_power = 200.0f;
+			}
+			break;
+		default:
+			{
+				std::cout<< "Unknown material: " << materials[0].node().apiTypeStr() << std::endl;
+			}
+			break;
+		}
+	}	
+
+	_materials.push_back(c);
+	return _materials.size() -1;
+}
+
 size_t				MayaSceneReader::GetNumMaterials() const
 {
-	return 1;
+	return _materials.size();
 }
 
 void				MayaSceneReader::GetMaterial(size_t i,MayaSceneReader::MaterialData* pMaterialOut) const
 {
+	*pMaterialOut = _materials[i]._materialData;
+	/*
 	pMaterialOut->_color = Raytrace::Vector3(1.0f,1.0f,1.0f);
 	pMaterialOut->_mirror_color = Raytrace::Vector3(1.0f,1.0f,1.0f);
-	pMaterialOut->_diffuseReflect = .9f;
-	pMaterialOut->_specular_reflect = 0.1f;
+	pMaterialOut->_diffuseReflect = 0.2f;
+	pMaterialOut->_specular_reflect = 0.8f;
 	pMaterialOut->_emit = .0f;
 	pMaterialOut->_ior = 1.0f;
 	pMaterialOut->_transparency = 0.0f;
+	pMaterialOut->_translucency_power = 200.0f;
+	pMaterialOut->_specular_power = 200.0f;*/
 }
 
 size_t				MayaSceneReader::GetNumLights() const
@@ -269,6 +367,11 @@ void	MayaSceneReader::GetBackgroundRadianceData(void* pData) const
 	memcpy(pData,_envData.data(),sizeof(Raytrace::Vector4)*_envData.size());
 }
 
+Raytrace::Matrix4 MayaSceneReader::GetViewMatrix() const
+{
+	return _viewMatrix;
+}
+
 void MayaSceneReader::parseTriMesh(const MObject& triMesh)
 {
 	MeshContainer container;
@@ -293,6 +396,56 @@ void MayaSceneReader::parseTriMesh(const MObject& triMesh)
 	}
 	int num = container._primitesPerInstance * container._numInstances;
 	end = begin + num;
+
+	container._materialIndices.resize( container._numInstances );
+	container._faceMaterialIndices.resize( container._numInstances );
+
+	//resolve the shaders
+	for(int i = 0; i < container._numInstances; ++i)
+	{
+		MObjectArray shaders;
+		MIntArray    faceIndices;
+
+		// get the shaders used by the i'th mesh instance
+		mesh.getConnectedShaders(i,shaders,faceIndices);
+
+
+		if(shaders.length() == 0)
+			container._materialIndices[i] = 0;
+		else
+		{
+
+			std::vector<int> localMaterials(shaders.length());
+
+			for(int j = 0; j < shaders.length(); ++j)
+			{
+				localMaterials[j] = 0;
+				bool found = false;
+				for(int k = 0; k < _materials.size(); ++k)
+					if(_materials[k]._materialObject == shaders[j])
+					{
+						localMaterials[j] = k;
+						found = true;
+						break;
+					}
+
+				if(!found)
+					localMaterials[j] = parseMaterial(shaders[j]);
+			}
+
+			if(localMaterials.size() == 1)
+				container._materialIndices[i] = localMaterials[0];
+			else
+			{
+				container._materialIndices[i] = -1;
+				container._faceMaterialIndices[i].resize( faceIndices.length() );
+				faceIndices.get( container._faceMaterialIndices[i].data() );
+				for(size_t j = 0; j < container._faceMaterialIndices[i].size(); ++ j)
+					container._faceMaterialIndices[i][j] = localMaterials[
+						container._faceMaterialIndices[i][j] ];
+			}
+		}
+	}
 
 	if(num != 0)
 		_primitives.insert( std::make_pair(boost::icl::interval<int>::right_open( begin, end),container) );

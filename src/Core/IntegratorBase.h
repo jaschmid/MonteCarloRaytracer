@@ -105,9 +105,9 @@ template<class _SampleData,class _RayData,class _SceneReader> struct IntegratorB
 			_materials[i]._emit = mat._emit;
 			_materials[i]._indexOfRefraction = mat._ior;
 			_materials[i]._transparency = mat._transparency;
-			_materials[i]._filterColor = Vector3(1.0f,1.0f,1.0f);
-			_materials[i]._specularPower = 200.0f;
-			_materials[i]._refractionPower = 200.0f;
+			_materials[i]._filterColor = Vector3(mat._transmit_filter, mat._transmit_filter, mat._transmit_filter);
+			_materials[i]._specularPower = mat._specular_power;
+			_materials[i]._refractionPower = mat._translucency_power;
 
 			Real reflect_sum = _materials[i]._transparency + _materials[i]._specularReflect + _materials[i]._diffuseReflect;
 			if(reflect_sum > 1.0f)
@@ -141,15 +141,31 @@ template<class _SampleData,class _RayData,class _SceneReader> struct IntegratorB
 		_backgroundSize = scene->getBackgroundSize();
 		_backgroundData.resize( _backgroundSize.x()* _backgroundSize.y() );
 
-		scene->getBackgroundData( _backgroundData.data() );
+		std::vector<Vector4> inverted_background(_backgroundSize.x()* _backgroundSize.y());
+
+		scene->getBackgroundData( inverted_background.data() );
+
+		for(int iy = 0; iy < _backgroundSize.y(); ++iy)
+			for(int ix = 0; ix < _backgroundSize.x(); ++ix)
+				_backgroundData[iy * _backgroundSize.x() + ix] =
+					inverted_background[ (_backgroundSize.y() - iy - 1) * _backgroundSize.x() + ix];
 		
+		generateImportanceLookup();
+
+		_view = scene->getViewMatrix();
+		_invView = _view.inverse();
 	}
 
 	inline ColorArray getBackgroundColor(const Vector3& direction)
 	{
+		Vector2 spherical = cartesianToSpherical((_invView * Vector4(direction.x(),direction.y(),direction.z(),0.0f)).head<3>());
+		return getBackgroundColor(spherical.x(),spherical.y());
+	}
 
+	inline Vector2 cartesianToSpherical(const Vector3& direction)
+	{
+		/*
 		//code from ILM library
-
 		Real r = sqrtf(direction.z() * direction.z() + direction.x()*direction.x());
 		Real latitude,longitude;
 		if( r < fabs(direction.y()) )
@@ -167,9 +183,40 @@ template<class _SampleData,class _RayData,class _SceneReader> struct IntegratorB
 		
 		assert(longitude <= R_PI*2.0f);
 		assert(latitude <= R_PI*.5f);
+		return Vector2(longitude, latitude + R_PI*.5f);*/
+		Vector3 normalized = direction / direction.norm();
+		Vector2 spherical( atan2(normalized.x() , -normalized.z()), acosf(normalized.y()) );
 
-		size_t x = longitude * (Real)_backgroundSize.x() / (R_PI*2.0f);
-		size_t y = (latitude + R_PI*.5f) * (Real)_backgroundSize.y() / (R_PI);
+		if(spherical.x() < 0.0f)
+			spherical.x() += R_PI * 2.0f;
+		else if(spherical.x() > R_PI * 2.0f)
+			spherical.x() -= R_PI * 2.0f;
+		
+		if(spherical.y() < 0.0f)
+			spherical.y() += R_PI;
+		else if(spherical.y() > R_PI)
+			spherical.y() -= R_PI;
+
+		return spherical;
+	}
+
+	inline Vector3 sphericalToCartesian(const Vector2& spherical)
+	{
+		Real cos_phi,sin_phi;
+		Real cos_theta,sin_theta;
+
+		cos_phi = cosf(spherical.x());
+		sin_phi = sinf(spherical.x());
+		cos_theta = cosf(spherical.y());
+		sin_theta = sinf(spherical.y());
+		
+		return Vector3( sin_phi*sin_theta,cos_theta,-cos_phi*sin_theta);
+	}
+
+	inline ColorArray getBackgroundColor(Real phi, Real theta)
+	{
+		size_t x = phi * (Real)_backgroundSize.x() / (R_PI*2.0f);
+		size_t y = theta * (Real)_backgroundSize.y() / (R_PI);
 
 		if(x >= _backgroundSize.x() )
 			x = _backgroundSize.x() -1;
@@ -456,14 +503,111 @@ template<class _SampleData,class _RayData,class _SceneReader> struct IntegratorB
 		return albedo;
 	}
 
+	inline Real getImportanceLookupSpherical(Vector2 random, Vector3& dir)
+	{
+		size_t iy, ix;
+
+		// todo: rewrite from 2n to 2logn
+
+		for(iy = 0; 
+			(iy+1) < _backgroundSize.y();
+			++iy)
+		{
+			if(_backgroundImportanceLookupYSlices[iy] >= random.x())
+				break;
+			else
+				random.x() -= _backgroundImportanceLookupYSlices[iy];
+		}
+
+		Real pdf = _backgroundImportanceLookupYSlices[iy];
+
+		for(ix = 0; 
+			(ix+1) < _backgroundSize.x();
+			++ix)
+		{
+			if(_backgroundImportanceLookupXSlices[iy * _backgroundSize.x() + ix] >= random.y())
+				break;
+			else
+				random.y() -= _backgroundImportanceLookupXSlices[iy * _backgroundSize.x() + ix];
+		}
+		
+		pdf = _backgroundData[iy * _backgroundSize.x() + ix].head<3>().sum()/3.0f / _backgroundIntegral;
+
+		Real phi = (Real)ix / (Real)_backgroundSize.x() * 2.0f * R_PI;
+		Real theta = (Real)iy / (Real)_backgroundSize.y() * R_PI;
+
+		Vector3 direction = sphericalToCartesian(Vector2(phi,theta));
+		dir = (_view * Vector4(direction.x(),direction.y(),direction.z(),0.0f)).head<3>();
+
+		return pdf;
+	}
+
+	inline Real getBackgroundEmissive()
+	{
+		return _backgroundEmissive;
+	}
+
+	void generateImportanceLookup()
+	{
+		_backgroundImportanceLookupXSlices.resize(_backgroundSize.x() * _backgroundSize.y());
+		_backgroundImportanceLookupYSlices.resize(_backgroundSize.y());
+		float totalImportance = 0.0f;
+		_backgroundEmissive = 0.0f; 
+		_backgroundIntegral = 0.0f;
+		for(int iy = 0; iy < _backgroundSize.y(); ++iy)
+		{
+			float areaSlice = 2.0f * R_PI * (cosf( (float)(iy)/(float)_backgroundSize.y() * M_PI ) - cosf( (float)(iy+1)/(float)_backgroundSize.y() * M_PI ));
+			float sliceImportance = 0.0f;
+
+			for(int ix = 0; ix < _backgroundSize.x(); ++ix)
+				sliceImportance += _backgroundImportanceLookupXSlices[iy * _backgroundSize.x() + ix] =
+					_backgroundData[iy * _backgroundSize.x() + ix].head<3>().sum()/3.0f;
+			
+			Real sum_check = 0.0f;
+
+			if(sliceImportance > 0.0f)
+				for(int ix = 0; ix < _backgroundSize.x(); ++ix)
+				{
+					_backgroundImportanceLookupXSlices[iy * _backgroundSize.x() + ix] /= sliceImportance;
+					sum_check += _backgroundImportanceLookupXSlices[iy * _backgroundSize.x() + ix];
+				}
+
+			_backgroundEmissive += sliceImportance;
+			_backgroundIntegral += sliceImportance * areaSlice / (Real)_backgroundSize.x();
+			totalImportance += _backgroundImportanceLookupYSlices[iy] = sliceImportance * areaSlice;
+		}
+		Real sum_check = 0.0f;
+		for(int iy = 0; iy < _backgroundSize.y(); ++iy)
+		{
+			_backgroundImportanceLookupYSlices[iy] /= totalImportance;
+			sum_check += _backgroundImportanceLookupYSlices[iy];
+		}
+		_backgroundEmissive/= (float)(_backgroundSize.x() * _backgroundSize.y());
+
+		std::cout << "Background Integral: " << _backgroundIntegral << std::endl;
+	}
+
+	Real getBackgroundPdf(const Vector3& x,const Vector3& y,const Vector3& z,const Vector3& dir)
+	{
+		
+		Real pdf = getBackgroundColor(dir).sum()/3.0f/ _backgroundIntegral;
+		//std::cout << "Direction: " << dir << " pdf" << pdf  << " normalized: " << (pdf*R_PI*4.0f) << std::endl;
+		return pdf;
+	}
+
 	std::vector<PrimitiveData>		_primitives;
 	std::vector<MaterialSettings>	_materials;
 	std::vector<Light>				_lights;
 
 	Matrix4							_invView;
+	Matrix4							_view;
+
+	Real							_backgroundEmissive;
+	Real							_backgroundIntegral;
 	Vector2u						_backgroundSize;
 	std::vector<Vector4>			_backgroundData;
-
+	std::vector<Real>				_backgroundImportanceLookupYSlices;
+	std::vector<Real>				_backgroundImportanceLookupXSlices;
 };
 
 }

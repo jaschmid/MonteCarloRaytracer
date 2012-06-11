@@ -173,6 +173,7 @@ MStatus MayaRenderView::redoIt()
 		
 		output->UpdateOutput();
 		MRenderView::updatePixels(0,xSize-1,0,ySize-1, pixels,true);
+		MRenderView::refresh(0,xSize-1,0,ySize-1);
 		Sleep(1000);
 	}
 	

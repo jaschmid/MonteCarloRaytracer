@@ -59,6 +59,8 @@ namespace Raytrace {
 			Real	_translucency;
 			Real	_transmit_filter;
 			Real	_transparency;
+			Real	_specular_power;
+			Real	_translucency_power;
 		};
 
 		struct LightData
@@ -87,6 +89,8 @@ namespace Raytrace {
 		virtual Vector2u		GetBackgroundRadianceSize() const = 0;
 		virtual Format			GetBackgroundRadianceFormat() const = 0;
 		virtual void 			GetBackgroundRadianceData(void* pData) const = 0;
+
+		virtual Matrix4			GetViewMatrix() const = 0;
 	};
 
 }

@@ -259,7 +259,7 @@ template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlo
 			weightedAlbedo.y() = std::min(weightedAlbedo.y(),newPath->_importance.y());
 			weightedAlbedo.z() = std::min(weightedAlbedo.z(),newPath->_importance.z());
 
-			Real reflectionChance = std::min<Real>(1.0f,std::max<Real>(0.0f,std::max<Real>(std::max<Real>(weightedAlbedo.x(),weightedAlbedo.y()),weightedAlbedo.z()))); 
+			Real reflectionChance = std::min<Real>(.9f,std::max<Real>(0.0f,std::max<Real>(std::max<Real>(weightedAlbedo.x(),weightedAlbedo.y()),weightedAlbedo.z()))); 
 
 			newPath->_cumulativeRoulette *= reflectionChance;
 
@@ -374,13 +374,13 @@ template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlo
 		Vector3 vRef;
 		Estimator e;
 
-		Estimator* diffuse = nullptr,*reflect = nullptr,*transparent=nullptr,*fallback=nullptr;
+		Estimator* diffuse = nullptr,*reflect = nullptr,*transparent=nullptr,*background=nullptr;
 		
 		if(material._diffuseReflect > 0.0f)
 		{
 			e._pdf = cosineWeightedHemisphere(uv,xTangent,yTangent,normal,e._v);
 			//e._debug = ColorArray(1.0f,0.0f,0.0f);
-			e._weight =material._diffuseReflect;
+			e._c = material._diffuseReflect;
 			estimators.push_back(e);
 			diffuse = &estimators.back();
 		}		
@@ -391,7 +391,7 @@ template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlo
 
 			e._pdf = cosineWeightedLobe(uv,xTangentSpecular,yTangent,vSpec,material._specularPower,e._v);
 			//e._debug = ColorArray(0.0f,1.0f,0.0f);
-			e._weight =material._specularReflect;
+			e._c =material._specularReflect;
 			estimators.push_back(e);
 			reflect = &estimators.back();
 		}		
@@ -401,34 +401,33 @@ template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlo
 
 			e._pdf = cosineWeightedLobe(uv,xTangentRefracted,yTangent,vRef,material._refractionPower,e._v);
 			//e._debug = ColorArray(0.0f,0.0f,1.0f);
-			e._weight =material._transparency;
+			e._c =material._transparency;
 			estimators.push_back(e);
 			transparent = &estimators.back();
 		}
 		
+		if(getBackgroundEmissive() > 0.0f)
 		{
 			//fallback
-			e._pdf = uniformHemisphere(uv,xTangent,yTangent,normal,e._v);
+			e._pdf = getImportanceLookupSpherical(uv,e._v);
 			//e._debug = ColorArray(0.5f,0.5f,.5f);
+			e._c = 1.0f;//getBackgroundEmissive();
 			estimators.push_back(e);
-			fallback = &estimators.back();
+			background = &estimators.back();
 		} 
 		
 		//calculate weights
 
-		Real weightSum= 0.0f;
+		Real cSum= 0.0f;
 
 		for(auto it = estimators.begin(); it != estimators.end(); ++it)
 		{
-			it->_factor = GetReflectedFactorPoint(material,primitive,it->_v,toViewer);
-			Real max_factor = std::max(std::max(it->_factor.x(),it->_factor.y()),it->_factor.z());
-			it->_c=max_factor;
-
-			weightSum += it->_c;
+			it->_factor = GetReflectedFactor(material,primitive,it->_v,toViewer);
+			cSum += it->_c;
 		}
 		
 		//normalize weights
-		if(weightSum <= 0.0f)
+		if(cSum <= 0.0f)
 		{
 			//if something goes wrong use fallback sphere
 			return ColorArray(0.0f,0.0f,0.0f);
@@ -436,7 +435,7 @@ template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlo
 		else
 			for(auto it = estimators.begin(); it != estimators.end(); ++it)
 			{
-				it->_c /= weightSum;
+				it->_c /= cSum;
 				it->_pdfSum = 0.0f;
 			}
 
@@ -466,14 +465,20 @@ template<class _SampleData,class _RayData,class _SceneReader,int _NumPathsPerBlo
 			chosenEstimator->_pdfSum += powf(pdfAtCosineWeightedLobe(xTangentSpecular,yTangent,vSpec,material._specularPower,chosenEstimator->_v)*reflect->_c,heuristicPower);
 		if(transparent)
 			chosenEstimator->_pdfSum += powf(pdfAtCosineWeightedLobe(xTangentRefracted,yTangent,vRef,material._refractionPower,chosenEstimator->_v)*transparent->_c,heuristicPower);
-		if(fallback)
-			chosenEstimator->_pdfSum += powf(pdfAtUniformSphere(xTangent,yTangent,normal,chosenEstimator->_v)*fallback->_c,heuristicPower);
+		if(background)
+			chosenEstimator->_pdfSum += powf(getBackgroundPdf(xTangent,yTangent,normal,chosenEstimator->_v)*background->_c,heuristicPower);
 
 		reflected = chosenEstimator->_v;
 
-		chosenEstimator->_weight = powf(chosenEstimator->_c*chosenEstimator->_pdf,heuristicPower)/chosenEstimator->_pdfSum;
+		chosenEstimator->_weight = powf(chosenEstimator->_c*chosenEstimator->_pdf,heuristicPower);
 
-		return chosenEstimator->_factor*chosenEstimator->_weight/ chosenEstimator->_pdf;
+		//assert(chosenEstimator->_pdfSum >= chosenEstimator->_weight);
+
+		chosenEstimator->_weight /= chosenEstimator->_pdfSum;
+
+		ColorArray totalFactor =  chosenEstimator->_factor*chosenEstimator->_weight/ (chosenEstimator->_pdf * chosenEstimator->_c);
+
+		return totalFactor;
 	}
 				
 	
